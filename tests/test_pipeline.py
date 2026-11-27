@@ -37,6 +37,7 @@ def test_train_eval_predict_write_the_run_folder(tiny_config, fake_data_dir, tmp
     assert saved["test"]["images"] == len(CLASS_NAMES)
     assert saved["split"] == "random"
     assert (run_dir / "confused_pairs.csv").exists()
+    assert (run_dir / "classification_report.txt").read_text().startswith("test accuracy:")
     with (run_dir / "per_class.csv").open() as handle:
         assert len(list(csv.DictReader(handle))) == len(CLASS_NAMES)
     assert (run_dir / "confusion_matrix.png").is_file()

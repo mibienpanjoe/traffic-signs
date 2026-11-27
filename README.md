@@ -60,6 +60,7 @@ Each training run gets its own folder, `runs/<run_name>/`:
 | `per_class.csv` | `eval` | Test precision, recall, F1 and image count for every class |
 | `confused_pairs.csv` | `eval` | The most frequent test mistakes, true class → predicted class, with names |
 | `confusion_matrix.png` | `eval` | Test confusion matrix with class names, each row as shares of the true class |
+| `classification_report.txt` | `eval` | The per-class test scores, for reading |
 
 The test images are not used to choose the checkpoint. `eval` and `predict` rebuild the model from the run's own `config.yaml`.
 

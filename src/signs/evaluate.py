@@ -8,6 +8,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
+from sklearn.metrics import classification_report  # noqa: E402
 
 from signs.analysis.metrics import (  # noqa: E402
     classification_scores,
@@ -68,6 +69,7 @@ def evaluate(run_dir: Path) -> dict:
     per_class.csv        test precision, recall, F1 and support per class
     confused_pairs.csv   the most frequent test mistakes, with names
     confusion_matrix.png row-normalized, with names
+    classification_report.txt  the per-class test scores, for reading
     """
     run_dir = Path(run_dir)
     device = pick_device()
@@ -96,6 +98,17 @@ def evaluate(run_dir: Path) -> dict:
     write_csv(run_dir / "per_class.csv", [_round(row) for row in test_scores["per_class"]])
     write_csv(run_dir / "confused_pairs.csv", pairs, fieldnames=PAIR_FIELDS)
     plot_confusion(matrix, test_scores["accuracy"], run_dir / "confusion_matrix.png")
+    report = classification_report(
+        truths,
+        predictions,
+        labels=list(range(len(CLASS_NAMES))),
+        target_names=CLASS_NAMES,
+        digits=3,
+        zero_division=0,
+    )
+    (run_dir / "classification_report.txt").write_text(
+        f"test accuracy: {test_scores['accuracy']:.3f}\n\n{report}"
+    )
 
     print(f"split: {config.data.split}")
     for name in ("val", "test"):
