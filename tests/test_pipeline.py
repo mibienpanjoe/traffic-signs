@@ -84,6 +84,7 @@ def test_cli_trains_and_evaluates(tiny_config):
             "train",
             "--set", f"data.data_dir={data_dir}",
             "--set", "data.image_size=32",
+            "--set", "data.split=random",
             "--set", "model.pretrained=false",
             "--set", "train.epochs=1",
             "--set", f"runs_dir={runs_dir}",

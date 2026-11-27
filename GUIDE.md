@@ -20,7 +20,8 @@ Finding the sign inside a full street photo is a different problem (object detec
 | `src/signs/data/download.py` | Fetch the two Parquet tables into `data/hf/` |
 | `src/signs/class_names.py` | The 43 names, in the official id order (0 = Speed limit 20, 14 = Stop, …) |
 | `src/signs/data/transforms.py` | Resize and augment the images |
-| `src/signs/data/dataset.py`, `splits.py` | Read the tables, hold out validation, batch |
+| `src/signs/data/dataset.py`, `splits.py` | Read the tables, hold out whole tracks for validation, batch |
+| `src/signs/data/tracks.py` | Check that training rows form 30-frame tracks (`signs tracks`) |
 | `src/signs/models/` | The neural network |
 | `src/signs/explore.py` | Look at the data before training |
 | `src/signs/training/trainer.py` | Fit the network and save the best weights |
@@ -76,7 +77,22 @@ The classes are unbalanced. In this training table, Speed limit 30 and Speed lim
 
 Images are `.ppm` files of different sizes, often small (around 30 to 100 pixels). The network needs one fixed size, so every photo is resized to 64×64 (`data.image_size` in the config).
 
-The official **test split stays untouched** until `signs eval`. During training we hold out 20% of the training images as a **validation set**. Validation tells us when to keep a checkpoint. The test set is the number you report, because the network never used it to update weights or to pick a checkpoint.
+The official **test split stays untouched** until `signs eval`. During training we hold out 20% of the training tracks as a **validation set**. Validation tells us when to keep a checkpoint. The test set is the number you report, because the network never used it to update weights or to pick a checkpoint.
+
+### Tracks, and why validation holds out whole tracks
+
+GTSRB was cut from video. Each physical sign was filmed as a **track** of 30 consecutive frames while the car drove towards it. The training table keeps those frames in order, so rows 0–29 are one sign, rows 30–59 the next, and so on: 888 tracks. The table does not say so, and `signs tracks` checks it from the pixels:
+
+- every block of 30 rows has a single class,
+- neighbouring frames inside a block correlate at 0.85 on average, against 0.13 across a block boundary,
+- inside a block the sign grows in 93% of steps, and it shrinks back at 99% of boundaries,
+- shifting the blocks by 5, 10, 15, 20 or 25 rows puts the boundaries where the frames still look alike (0.82–0.88), so 30-row blocks starting at row 0 are the tracks.
+
+A random split of single frames leaves 886 of the 888 tracks with frames on both sides. Validation then asks the model to recognise a sign it has already trained on, from a frame a few centimetres further along the road. That makes validation accuracy look better than accuracy on new signs, and it can pick the wrong checkpoint.
+
+The default split (`data.split: track`) sends whole tracks to validation, 20% of the tracks of each class and at least one, so every class appears on both sides. `data.split: random` keeps the old behaviour, only to measure how much it inflates the numbers.
+
+The official test set comes from different tracks than the training table, so it is not affected.
 
 ## 4. From a photo to a tensor
 
@@ -176,7 +192,8 @@ Fill in X from `metrics.json` after `signs eval`.
 | Epoch | One full pass over the training set |
 | Batch | The 64 images used for one weight update |
 | Loss | Cross-entropy; how wrong the logits are |
-| Validation set | 20% of train, used only to pick the checkpoint |
+| Track | 30 consecutive video frames of one physical sign |
+| Validation set | 20% of the training tracks, used only to pick the checkpoint |
 | Test set | Official GTSRB test images, used once at the end |
 | Transfer learning | Reuse a network trained on a different image task |
 | Frozen weights | Filters we do not update |

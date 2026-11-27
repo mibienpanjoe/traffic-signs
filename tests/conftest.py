@@ -37,6 +37,16 @@ def fake_data_dir(tmp_path_factory):
     return data_dir
 
 
+@pytest.fixture(scope="session")
+def fake_track_dir(tmp_path_factory):
+    """Training rows in track order: 2 tracks of 30 frames per class."""
+    data_dir = tmp_path_factory.mktemp("hf_tracks")
+    rng = np.random.default_rng(1)
+    pq.write_table(_table(60, rng), data_dir / "train.parquet")
+    pq.write_table(_table(1, rng), data_dir / "test.parquet")
+    return data_dir
+
+
 @pytest.fixture
 def tiny_config(fake_data_dir, tmp_path):
     """A config that trains a random-init MobileNetV2 on the fake data, fast."""
@@ -46,6 +56,8 @@ def tiny_config(fake_data_dir, tmp_path):
             f"data.data_dir={fake_data_dir}",
             "data.image_size=32",
             "data.batch_size=32",
+            # 3 frames per class do not form 30-frame tracks.
+            "data.split=random",
             "model.pretrained=false",
             "train.epochs=2",
             f"runs_dir={tmp_path / 'runs'}",

@@ -20,7 +20,7 @@ def test_split_changes_with_seed():
 
 
 def test_splits_load_with_expected_shapes(fake_data_dir):
-    config = DataConfig(data_dir=str(fake_data_dir), image_size=32, batch_size=8)
+    config = DataConfig(data_dir=str(fake_data_dir), split="random", image_size=32, batch_size=8)
     train_set, val_set, test_set = load_splits(config)
     assert len(train_set) + len(val_set) == 43 * 3
     assert len(test_set) == 43
@@ -30,7 +30,7 @@ def test_splits_load_with_expected_shapes(fake_data_dir):
 
 
 def test_eval_transform_is_deterministic(fake_data_dir):
-    config = DataConfig(data_dir=str(fake_data_dir), image_size=32)
+    config = DataConfig(data_dir=str(fake_data_dir), split="random", image_size=32)
     _, _, test_set = load_splits(config)
     first, _ = test_set[0]
     second, _ = test_set[0]
@@ -39,7 +39,7 @@ def test_eval_transform_is_deterministic(fake_data_dir):
 
 
 def test_seeded_loader_repeats_its_order(fake_data_dir):
-    config = DataConfig(data_dir=str(fake_data_dir), image_size=32, batch_size=16)
+    config = DataConfig(data_dir=str(fake_data_dir), split="random", image_size=32, batch_size=16)
     train_set, _, _ = load_splits(config)
 
     def first_labels(seed):
@@ -48,3 +48,11 @@ def test_seeded_loader_repeats_its_order(fake_data_dir):
 
     assert first_labels(3) == first_labels(3)
     assert first_labels(3) != first_labels(4)
+
+
+def test_track_structure_finds_the_tracks(fake_track_dir):
+    from signs.data.tracks import track_structure
+
+    stats = track_structure(DataConfig(data_dir=str(fake_track_dir)))
+    assert stats["tracks"] == 86
+    assert stats["rows_divide_into_tracks"] and stats["one_class_per_track"]
