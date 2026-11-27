@@ -147,6 +147,12 @@ def test_experiment_runs_each_seed_once_and_summarizes(tiny_config, tmp_path, ca
     assert "already trained, evaluating" in capsys.readouterr().out
     assert (seed0 / "model.pt").read_bytes() == weights
 
+    # A seed stopped before its last epoch has no summary and is retrained.
+    seed1 = tiny_config.run_dir.parent / "tiny-seed1"
+    (seed1 / "train_summary.json").unlink()
+    run_experiment(tiny_config, [0, 1], results)
+    assert (seed1 / "train_summary.json").is_file()
+
     table = write_table([results / "tiny.json"], results / "table")
     assert "| tiny | random | 2 |" in table
     assert (results / "table.csv").is_file() and (results / "table.md").is_file()

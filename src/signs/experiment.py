@@ -47,7 +47,11 @@ def run_experiment(
     run_dirs = []
     for seed in seeds:
         run = seed_run(config, seed)
-        trained = (run.run_dir / CHECKPOINT_FILE).is_file()
+        # train_summary.json is written only after the last epoch, so a run
+        # stopped halfway has a checkpoint but does not count as trained.
+        trained = (run.run_dir / CHECKPOINT_FILE).is_file() and (
+            run.run_dir / "train_summary.json"
+        ).is_file()
         evaluated = (run.run_dir / "metrics.json").is_file()
         if trained and not overwrite:
             if not same_training(load_run_config(run.run_dir), run):
