@@ -8,6 +8,31 @@ The model is a MobileNetV2 network. Its convolutional layers stay as they were t
 
 The study notes, with the libraries and the training concepts, are in [GUIDE.md](GUIDE.md).
 
+## Results so far
+
+Frozen MobileNetV2 (only the last layer trained), 64×64 input, 5 epochs on CPU, 3 seeds. Mean ± standard deviation over seeds, in percent:
+
+| Configuration | Split | Seeds | Val accuracy | Test accuracy | Test macro-F1 | Val − test |
+|---|---|---|---|---|---|---|
+| mobilenet_frozen | track | 3 | 44.0 ± 0.7 | 45.5 ± 1.1 | 35.4 ± 1.1 | -1.5 ± 0.8 |
+| mobilenet_frozen_random_split | random | 3 | 64.3 ± 0.6 | 46.3 ± 0.7 | 36.5 ± 0.8 | 17.9 ± 0.3 |
+
+**Validation must hold out whole tracks.** Each physical sign is a track of 30 near-identical video frames. With the old random frame split, validation accuracy is 18 points above test accuracy. Validation then scores signs the model already trained on, from a frame further along the road. With whole tracks held out, validation is within 2 points of test. Test accuracy barely moves (45.5 vs 46.3), so the random split did not train a different model, it misreported it. Track structure evidence: [`results/track_structure.json`](results/track_structure.json).
+
+**This baseline is weak, and accuracy hides how weak.** Test accuracy is 45.5%, but macro-F1 is 35.4%: many of the rare classes do much worse than the common ones. Pedestrians is never recognized (recall 0 in all 3 seeds), and End of no passing, Ice or snow and Curve right stay under 5%. Yield, No entry and Priority road, which have distinctive shapes, reach 80–85%.
+
+**The mistakes are the expected ones.** The most frequent confusions, averaged over seeds, are Speed limit 120 → 80 (30% of 120 signs), 30 → 50 (29%), Ahead only → Keep right (24%) and 50 → 70 (18%). Speed limits share a red ring and differ only in their digits, which at 64×64 through a frozen ImageNet trunk is little detail.
+
+Reproduce:
+
+```bash
+uv run signs tracks --out results/track_structure.json
+uv run signs experiment --config configs/mobilenet_frozen.yaml --seeds 0 1 2
+uv run signs experiment --config configs/mobilenet_frozen_random_split.yaml --seeds 0 1 2
+uv run signs table results/mobilenet_frozen.json results/mobilenet_frozen_random_split.json \
+    --out results/split_comparison
+```
+
 ## Layout
 
 | Path | Role |
