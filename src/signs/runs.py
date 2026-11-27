@@ -1,11 +1,11 @@
 """Everything a run leaves behind lives in one folder: runs/<run_name>/.
 
-    config.yaml          the full resolved config the run used
-    history.csv          one row per epoch
-    model.pt             weights with the best validation accuracy
-    train_summary.json   best epoch and its validation scores
-    metrics.json         test scores, written by `signs eval`
-    per_class.csv        test precision, recall and F1 per class
+config.yaml          the full resolved config the run used
+history.csv          one row per epoch
+model.pt             weights with the best validation accuracy
+train_summary.json   best epoch and its validation scores
+metrics.json         test scores, written by `signs eval`
+per_class.csv        test precision, recall and F1 per class
 """
 
 import csv
@@ -35,8 +35,7 @@ def create_run_dir(config: Config, overwrite: bool = False) -> Path:
     run_dir = config.run_dir
     if (run_dir / CHECKPOINT_FILE).exists() and not overwrite:
         raise FileExistsError(
-            f"{run_dir} already holds a trained model. "
-            "Pick another --run-name or pass --overwrite."
+            f"{run_dir} already holds a trained model. Pick another --run-name or pass --overwrite."
         )
     if overwrite:
         # Old test scores or weights must not sit next to the new run's config.

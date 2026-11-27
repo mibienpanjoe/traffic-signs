@@ -1,5 +1,7 @@
 # Traffic sign recognition
 
+[![CI](https://github.com/mibienpanjoe/traffic-signs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mibienpanjoe/traffic-signs/actions/workflows/ci.yml)
+
 A camera sees one cropped traffic sign. This project names it, and reports how sure the model is. That label is what a small robot or a driver-assist demo can turn into an action: stop, yield, or a speed limit.
 
 The model is a MobileNetV2 network. Its convolutional layers stay as they were trained on ImageNet. A new final layer learns the 43 sign classes of the German Traffic Sign Recognition Benchmark (GTSRB).
@@ -69,6 +71,16 @@ uv run signs train --seed 1 --run-name mobilenet_frozen-seed1
 On a CPU, the same seed gives the same weights and the same numbers. On a GPU, repeats are close but not guaranteed to be exact. The validation split has its own `data.split_seed`, so changing the training seed does not change which images are held out. `train` refuses to replace a finished run unless you pass `--overwrite`.
 
 There is no GPU requirement. Five epochs on a CPU is the intended first run.
+
+## Development
+
+```bash
+uv sync
+uv run pre-commit install   # ruff lint and format on every commit
+uv run pytest               # runs on a tiny fake dataset, no download
+```
+
+CI runs the same lint and tests on pushes to `main` and on every pull request, on Python 3.10 and 3.12.
 
 ## After the presentation
 

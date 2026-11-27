@@ -4,7 +4,9 @@ import torch.nn as nn
 from torchvision.models import MobileNet_V2_Weights, mobilenet_v2
 
 
-def build_mobilenet(num_classes: int, pretrained: bool = True, freeze_features: bool = True) -> nn.Module:
+def build_mobilenet(
+    num_classes: int, pretrained: bool = True, freeze_features: bool = True
+) -> nn.Module:
     """MobileNetV2 with a new final layer for GTSRB.
 
     The convolutional trunk already detects edges, colors, and simple shapes

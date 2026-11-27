@@ -9,8 +9,8 @@ import io
 from pathlib import Path
 
 import pyarrow.parquet as pq
-from PIL import Image
 import torch
+from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 
 from signs.config import DataConfig
