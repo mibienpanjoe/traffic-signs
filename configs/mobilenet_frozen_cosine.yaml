@@ -1,0 +1,8 @@
+# The frozen baseline trained the same way as the other Phase 3 models:
+# 8 epochs, cosine schedule, early stopping. Only the last layer learns.
+base: mobilenet_frozen.yaml
+run_name: mobilenet_frozen_cosine
+train:
+  epochs: 8
+  schedule: cosine
+  early_stopping_patience: 3

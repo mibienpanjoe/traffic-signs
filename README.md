@@ -80,7 +80,8 @@ Each training run gets its own folder, `runs/<run_name>/`:
 | `config.yaml` | `train` | The full resolved config the run used |
 | `history.csv` | `train` | Loss, accuracy, learning rate and time per epoch |
 | `model.pt` | `train` | Weights with the best validation accuracy |
-| `train_summary.json` | `train` | Best epoch and its validation scores |
+| `train_summary.json` | `train` | Best epoch, its validation scores, epochs run, trainable parameters, training time |
+| `training_curves.png` | `train` | Loss, accuracy and learning rate per epoch |
 | `metrics.json` | `eval` | Accuracy and macro precision, recall and F1, on validation and on test |
 | `per_class.csv` | `eval` | Test precision, recall, F1 and image count for every class |
 | `confused_pairs.csv` | `eval` | The most frequent test mistakes, true class → predicted class, with names |

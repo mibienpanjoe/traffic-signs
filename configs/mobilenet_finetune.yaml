@@ -1,0 +1,13 @@
+# MobileNetV2 with every layer trained. The new last layer starts at
+# lr; the ImageNet trunk moves ten times slower so its features are
+# adapted, not overwritten. Cosine schedule, early stopping on validation.
+base: base.yaml
+run_name: mobilenet_finetune
+model:
+  freeze_features: false
+train:
+  epochs: 8
+  lr: 0.001
+  backbone_lr_scale: 0.1
+  schedule: cosine
+  early_stopping_patience: 3

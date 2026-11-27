@@ -125,6 +125,8 @@ MobileNetV2 is the small member of the MobileNet family, built for phones and ro
 
 Forward pass, in one sentence: the frozen trunk turns a 64×64 photo into a feature vector, and the linear layer turns that vector into 43 logits.
 
+**Fine-tuning** (`configs/mobilenet_finetune.yaml`) trains the trunk too. ImageNet filters were never shown the digits of a speed-limit sign, so adapting them should help. The trunk gets a learning rate ten times smaller than the new layer (`train.backbone_lr_scale: 0.1`): the new layer starts from random weights and needs big steps, while the trunk is already good and big steps would wreck it. Training every layer costs about three times more per epoch on a CPU.
+
 ## 6. Training
 
 **Loss.** `CrossEntropyLoss` compares the 43 logits to the true class id. It is low when the true class has the largest logit, and high when a wrong class does. Inside the loss, log-softmax is applied for you. You do not softmax before this loss.
@@ -132,6 +134,12 @@ Forward pass, in one sentence: the frozen trunk turns a 64×64 photo into a feat
 **Optimizer.** Adam updates only the weights with `requires_grad = True`. The learning rate `1e-3` is a standard first choice for a new classifier head.
 
 **Epoch.** One epoch means every training image has been seen once. Each batch produces a loss, `backward()` fills gradients, and `step()` changes the weights.
+
+**Learning-rate schedule.** With `train.schedule: cosine` the learning rate starts at `lr` and falls along half a cosine towards 0 by the last epoch. Early epochs take big steps, and late epochs take small ones that settle the weights instead of bouncing around a minimum.
+
+**Early stopping.** With `train.early_stopping_patience: 3`, training stops once validation accuracy has not improved for 3 epochs. The checkpoint kept is still the best epoch, so stopping only saves time.
+
+**Training curves.** Every run saves `training_curves.png`: train and validation loss and accuracy, and the learning rate, per epoch. The kept checkpoint is marked with a dashed line. A widening gap between train and validation accuracy is overfitting.
 
 **What we print.**
 
