@@ -51,6 +51,10 @@ class TrainConfig:
     epochs: int = 5
     lr: float = 1e-3
 
+    def __post_init__(self):
+        if isinstance(self.epochs, int) and self.epochs < 1:
+            raise ValueError(f"config key train.epochs must be at least 1, got {self.epochs}")
+
 
 @dataclass
 class Config:
