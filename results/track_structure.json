@@ -1,0 +1,19 @@
+{
+  "rows": 26640,
+  "track_length": 30,
+  "tracks": 888,
+  "rows_divide_into_tracks": true,
+  "one_class_per_track": true,
+  "similarity_within_track": 0.853,
+  "similarity_across_boundary": 0.131,
+  "size_grows_within_track": 0.932,
+  "size_grows_across_boundary": 0.012,
+  "boundary_similarity_by_offset": {
+    "0": 0.131,
+    "5": 0.876,
+    "10": 0.874,
+    "15": 0.861,
+    "20": 0.846,
+    "25": 0.82
+  }
+}

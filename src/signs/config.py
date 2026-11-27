@@ -32,11 +32,23 @@ class DataConfig:
     image_size: int = 64
     batch_size: int = 64
     val_fraction: float = 0.2
+    # "track" keeps each 30-frame track of one physical sign on one side of
+    # the split. "random" splits single frames, which leaks near-duplicates
+    # into validation; it is kept only to measure that leak.
+    split: str = "track"
     # The split seed stays fixed when the training seed changes, so every
     # seed of an experiment is scored on the same validation images.
     split_seed: int = 42
     num_workers: int = 0
     augment: AugmentConfig = field(default_factory=AugmentConfig)
+
+    def __post_init__(self):
+        if self.split not in ("track", "random"):
+            raise ValueError(f"config key data.split must be track or random, got {self.split!r}")
+        if not 0 < self.val_fraction < 1:
+            raise ValueError(
+                f"config key data.val_fraction must be between 0 and 1, got {self.val_fraction}"
+            )
 
 
 @dataclass

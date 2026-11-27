@@ -63,6 +63,19 @@ def cmd_explore(args) -> None:
     explore(_config(args).data, args.out)
 
 
+def cmd_tracks(args) -> None:
+    from signs.data.tracks import track_structure
+    from signs.runs import write_json
+
+    stats = track_structure(_config(args).data)
+    for key, value in stats.items():
+        print(f"{key}: {value}")
+    if args.out is not None:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        write_json(args.out, stats)
+        print(f"saved {args.out}")
+
+
 def cmd_train(args) -> None:
     from signs.training.trainer import train
 
@@ -96,6 +109,11 @@ def build_parser() -> argparse.ArgumentParser:
     _add_config_args(explore)
     explore.add_argument("--out", type=Path, default=Path("runs/explore"))
     explore.set_defaults(func=cmd_explore)
+
+    tracks = commands.add_parser("tracks", help="check that training rows form 30-frame tracks")
+    _add_config_args(tracks)
+    tracks.add_argument("--out", type=Path, default=None, help="also save the numbers as JSON")
+    tracks.set_defaults(func=cmd_tracks)
 
     train = commands.add_parser("train", help="train a run into runs/<run_name>/")
     _add_config_args(train)

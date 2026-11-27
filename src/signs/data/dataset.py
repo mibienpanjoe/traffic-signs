@@ -14,7 +14,7 @@ from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 
 from signs.config import DataConfig
-from signs.data.splits import random_split_indices
+from signs.data.splits import split_indices
 from signs.data.transforms import eval_transform, train_transform
 from signs.training.seed import loader_generator, worker_init_fn
 
@@ -57,11 +57,12 @@ class SignDataset(Dataset):
 def load_splits(config: DataConfig):
     """Return train, validation, and test datasets.
 
-    Validation is a share of the training images, held out so we can notice
-    overfitting before we touch the test set.
+    Validation is a share of the training tracks (or images, with
+    split: random), held out so we can notice overfitting and pick a
+    checkpoint before we touch the test set.
     """
-    n_train = _table(config.data_dir, "train").num_rows
-    train_idx, val_idx = random_split_indices(n_train, config.val_fraction, config.split_seed)
+    labels = _table(config.data_dir, "train").column("label").to_pylist()
+    train_idx, val_idx = split_indices(labels, config.split, config.val_fraction, config.split_seed)
     train_set = SignDataset(config.data_dir, "train", train_transform(config), train_idx)
     val_set = SignDataset(config.data_dir, "train", eval_transform(config), val_idx)
     test_set = SignDataset(config.data_dir, "test", eval_transform(config))
