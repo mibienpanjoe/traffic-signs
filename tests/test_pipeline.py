@@ -156,3 +156,5 @@ def test_experiment_runs_each_seed_once_and_summarizes(tiny_config, tmp_path, ca
     table = write_table([results / "tiny.json"], results / "table")
     assert "| tiny | random | 2 |" in table
     assert (results / "table.csv").is_file() and (results / "table.md").is_file()
+    write_table([results / "tiny.json"], results / "split_v1.5")
+    assert (results / "split_v1.5.md").is_file()

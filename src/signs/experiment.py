@@ -78,6 +78,15 @@ def run_experiment(
     return summary
 
 
+def table_paths(out_stem: Path) -> tuple[Path, Path]:
+    """<out_stem>.csv and <out_stem>.md, keeping any dot already in the name."""
+    out_stem = Path(out_stem)
+    return (
+        out_stem.parent / f"{out_stem.name}.csv",
+        out_stem.parent / f"{out_stem.name}.md",
+    )
+
+
 def write_table(summary_paths: list[Path], out_stem: Path) -> str:
     """Collect experiment summaries into <out_stem>.csv and <out_stem>.md."""
     rows = [json.loads(Path(path).read_text()) for path in summary_paths]
@@ -85,7 +94,7 @@ def write_table(summary_paths: list[Path], out_stem: Path) -> str:
         raise ValueError("no experiment summaries given")
     out_stem = Path(out_stem)
     out_stem.parent.mkdir(parents=True, exist_ok=True)
-    write_csv(out_stem.with_suffix(".csv"), rows)
+    write_csv(table_paths(out_stem)[0], rows)
     table = markdown_table(rows)
-    out_stem.with_suffix(".md").write_text(table)
+    table_paths(out_stem)[1].write_text(table)
     return table

@@ -89,10 +89,11 @@ def cmd_experiment(args) -> None:
 
 
 def cmd_table(args) -> None:
-    from signs.experiment import write_table
+    from signs.experiment import table_paths, write_table
 
     print(write_table(args.summaries, args.out), end="")
-    print(f"saved {args.out.with_suffix('.csv')} and {args.out.with_suffix('.md')}")
+    csv_path, md_path = table_paths(args.out)
+    print(f"saved {csv_path} and {md_path}")
 
 
 def cmd_eval(args) -> None:
