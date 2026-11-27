@@ -121,6 +121,8 @@ We do not train those filters from random weights. **Transfer learning** starts 
 
 The original last layer predicts 1000 ImageNet classes. We throw that layer away and put in a new `Linear` layer with 43 outputs, one per sign. Only this new layer, and the small dropout layer in front of it, is trained. That is why a few epochs on a CPU are enough.
 
+**A network from scratch** (`configs/cnn_scratch.yaml`, `src/signs/models/small_cnn.py`) asks whether ImageNet is needed at all. Three blocks of two 3×3 convolutions with 16, 32 and 64 channels, each block followed by a 2×2 max-pool that halves the image, then a global average and one linear layer: 75 thousand parameters against 2.3 million for MobileNetV2. Every weight starts random, so it trains for more epochs and with weight decay.
+
 MobileNetV2 is the small member of the MobileNet family, built for phones and robots. ResNet18 would also work; it is heavier and slower on this CPU.
 
 Forward pass, in one sentence: the frozen trunk turns a 64×64 photo into a feature vector, and the linear layer turns that vector into 43 logits.

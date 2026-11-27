@@ -26,3 +26,17 @@ def test_unfrozen_mode_trains_everything():
 def test_unknown_model_is_rejected():
     with pytest.raises(ValueError, match="unknown model"):
         build_model(ModelConfig(name="nope", pretrained=False))
+
+
+def test_small_cnn_works_at_several_sizes():
+    network = build_model(ModelConfig(name="small_cnn", pretrained=False, freeze_features=False))
+    network.eval()
+    with torch.no_grad():
+        for size in (32, 64, 96):
+            assert network(torch.zeros(1, 3, size, size)).shape == (1, 43)
+    assert all(p.requires_grad for p in network.parameters())
+
+
+def test_small_cnn_refuses_pretrained_weights():
+    with pytest.raises(ValueError, match="no pretrained weights"):
+        build_model(ModelConfig(name="small_cnn", pretrained=True, freeze_features=False))
