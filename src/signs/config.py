@@ -107,7 +107,7 @@ def _build(cls, values: dict, where: str):
                 raise ValueError(f"config key {prefix} expects a mapping, got {value!r}")
             kwargs[name] = _build(hints[name], value, prefix)
         else:
-            kwargs[name] = value
+            kwargs[name] = _coerce(value, hints[name], f"{where}.{name}" if where else name)
     return cls(**kwargs)
 
 
@@ -119,6 +119,25 @@ def _field_type(keys: list[str]):
             return None
         cls = typing.get_type_hints(cls).get(key)
     return cls
+
+
+def _coerce(value, expected, where: str):
+    """Check a value against its field type, accepting the YAML spellings that mean it.
+
+    YAML reads `3e-4` (no dot) as a string and `1` as an int; both are fine
+    for a float field. Anything else that does not fit is an error.
+    """
+    if expected not in (float, int, bool, str):
+        return value
+    is_bool = isinstance(value, bool)
+    if expected is float and not is_bool and isinstance(value, (int, float, str)):
+        try:
+            return float(value)
+        except ValueError:
+            pass
+    elif isinstance(value, expected) and (expected is bool or not is_bool):
+        return value
+    raise ValueError(f"config key {where} expects {expected.__name__}, got {value!r}")
 
 
 def _parse_override(text: str) -> dict:
