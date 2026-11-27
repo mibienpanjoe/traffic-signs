@@ -137,6 +137,8 @@ Forward pass, in one sentence: the frozen trunk turns a 64×64 photo into a feat
 
 **Learning-rate schedule.** With `train.schedule: cosine` the learning rate starts at `lr` and falls along half a cosine towards 0 by the last epoch. Early epochs take big steps, and late epochs take small ones that settle the weights instead of bouncing around a minimum.
 
+**Weight decay.** `train.weight_decay` adds a small L2 penalty on every weight, so the network prefers small weights and memorizes less. The pretrained models leave it at 0. It is for a network trained from random weights.
+
 **Early stopping.** With `train.early_stopping_patience: 3`, training stops once validation accuracy has not improved for 3 epochs. The checkpoint kept is still the best epoch, so stopping only saves time.
 
 **Training curves.** Every run saves `training_curves.png`: train and validation loss and accuracy, and the learning rate, per epoch. The kept checkpoint is marked with a dashed line. A widening gap between train and validation accuracy is overfitting.

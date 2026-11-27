@@ -72,6 +72,8 @@ class TrainConfig:
     # trunk is trained, a smaller step keeps it close to its ImageNet weights
     # while the new last layer learns at full speed.
     backbone_lr_scale: float = 1.0
+    # L2 penalty on the weights, passed to Adam. Helps a network trained
+    # from random weights, which has nothing pretrained to hold it back.
     weight_decay: float = 0.0
 
     def __post_init__(self):
