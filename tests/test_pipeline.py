@@ -65,7 +65,15 @@ def test_finished_run_is_not_overwritten(tiny_config):
     train(tiny_config)
     with pytest.raises(FileExistsError):
         train(tiny_config)
+
+
+def test_overwrite_removes_the_old_test_scores(tiny_config):
+    train(tiny_config)
+    evaluate(tiny_config.run_dir)
+    assert (tiny_config.run_dir / "metrics.json").is_file()
     train(tiny_config, overwrite=True)
+    assert not (tiny_config.run_dir / "metrics.json").exists()
+    assert (tiny_config.run_dir / "model.pt").is_file()
 
 
 def test_cli_trains_and_evaluates(tiny_config):
