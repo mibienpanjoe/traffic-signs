@@ -1,40 +1,27 @@
-"""Classify one sign photo with the trained model."""
+"""Classify one sign photo with a trained run."""
 
-import argparse
 from pathlib import Path
 
 import torch
 from PIL import Image
 
 from signs.class_names import CLASS_NAMES
-from signs.data.dataset import eval_transform
-from signs.models.mobilenet import build_model
-
-CHECKPOINT = Path("outputs") / "model.pt"
+from signs.data.transforms import eval_transform
+from signs.runs import load_trained_model, pick_device
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("image", type=Path)
-    args = parser.parse_args()
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    network = build_model().to(device)
-    saved = torch.load(CHECKPOINT, map_location=device, weights_only=True)
-    network.load_state_dict(saved["state_dict"])
-    network.eval()
-
-    image = Image.open(args.image).convert("RGB")
-    batch = eval_transform()(image).unsqueeze(0).to(device)
+def predict(run_dir: Path, image_path: Path, top_k: int = 3) -> list[tuple[str, float]]:
+    """Return the top_k (class name, softmax score) pairs for one image."""
+    device = pick_device()
+    network, config = load_trained_model(run_dir, device)
+    image = Image.open(image_path).convert("RGB")
+    batch = eval_transform(config.data)(image).unsqueeze(0).to(device)
 
     with torch.no_grad():
         probabilities = torch.softmax(network(batch), dim=1)[0]
 
-    top = torch.topk(probabilities, k=3)
-    print(f"file: {args.image}")
-    for score, index in zip(top.values.tolist(), top.indices.tolist()):
-        print(f"  {score:6.1%}  {CLASS_NAMES[index]}")
-
-
-if __name__ == "__main__":
-    main()
+    top = torch.topk(probabilities, k=top_k)
+    return [
+        (CLASS_NAMES[index], score)
+        for score, index in zip(top.values.tolist(), top.indices.tolist())
+    ]

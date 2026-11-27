@@ -9,69 +9,32 @@ import io
 from pathlib import Path
 
 import pyarrow.parquet as pq
-import torch
 from PIL import Image
+import torch
 from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
 
-DATA_DIR = Path("data") / "hf"
-IMAGE_SIZE = 64
-BATCH_SIZE = 64
-VAL_FRACTION = 0.2
-SEED = 42
-
-# MobileNetV2 was pretrained on ImageNet with these channel means and stds.
-# Matching them keeps the pretrained features in the range they expect.
-IMAGENET_MEAN = (0.485, 0.456, 0.406)
-IMAGENET_STD = (0.229, 0.224, 0.225)
+from signs.config import DataConfig
+from signs.data.splits import random_split_indices
+from signs.data.transforms import eval_transform, train_transform
 
 _TABLES = {}
 
 
-def train_transform():
-    """Augment training photos so the model sees more lighting and tilt.
-
-    Signs are not mirrored: a flipped "keep right" is a different sign,
-    so there is no horizontal flip here.
-    """
-    return transforms.Compose(
-        [
-            transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
-            transforms.RandomRotation(15),
-            transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2),
-            transforms.ToTensor(),
-            transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
-        ]
-    )
-
-
-def eval_transform():
-    """Resize and normalize only. Evaluation must not randomly change the photo."""
-    return transforms.Compose(
-        [
-            transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
-            transforms.ToTensor(),
-            transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
-        ]
-    )
-
-
-def _table(split: str):
-    if split not in _TABLES:
-        path = DATA_DIR / f"{split}.parquet"
+def _table(data_dir: Path, split: str):
+    path = Path(data_dir) / f"{split}.parquet"
+    key = str(path.resolve())
+    if key not in _TABLES:
         if not path.is_file():
-            raise FileNotFoundError(
-                f"Missing {path}. Run: python -m signs.data.download"
-            )
-        _TABLES[split] = pq.read_table(path)
-    return _TABLES[split]
+            raise FileNotFoundError(f"Missing {path}. Run: signs download")
+        _TABLES[key] = pq.read_table(path)
+    return _TABLES[key]
 
 
 class SignDataset(Dataset):
     """One split of GTSRB. Each item is a PIL image (then transformed) and an int label."""
 
-    def __init__(self, split: str, transform, indices=None):
-        table = _table(split)
+    def __init__(self, data_dir, split: str, transform, indices=None):
+        table = _table(data_dir, split)
         self._bytes = table.column("image")
         self.labels = table.column("label").to_pylist()
         self.transform = transform
@@ -90,31 +53,35 @@ class SignDataset(Dataset):
         return image, label
 
 
-def _split_indices(n: int):
-    generator = torch.Generator().manual_seed(SEED)
-    permutation = torch.randperm(n, generator=generator).tolist()
-    n_val = int(n * VAL_FRACTION)
-    return permutation[n_val:], permutation[:n_val]
-
-
-def load_splits():
+def load_splits(config: DataConfig):
     """Return train, validation, and test datasets.
 
-    Validation is 20% of the training images, held out so we can notice
+    Validation is a share of the training images, held out so we can notice
     overfitting before we touch the test set.
     """
-    n_train = _table("train").num_rows
-    train_idx, val_idx = _split_indices(n_train)
-    train_set = SignDataset("train", train_transform(), train_idx)
-    val_set = SignDataset("train", eval_transform(), val_idx)
-    test_set = SignDataset("test", eval_transform())
+    n_train = _table(config.data_dir, "train").num_rows
+    train_idx, val_idx = random_split_indices(n_train, config.val_fraction, config.split_seed)
+    train_set = SignDataset(config.data_dir, "train", train_transform(config), train_idx)
+    val_set = SignDataset(config.data_dir, "train", eval_transform(config), val_idx)
+    test_set = SignDataset(config.data_dir, "test", eval_transform(config))
     return train_set, val_set, test_set
 
 
-def make_loader(dataset, shuffle: bool):
-    return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=shuffle)
+def load_test_set(config: DataConfig):
+    return SignDataset(config.data_dir, "test", eval_transform(config))
 
 
-def preview_dataset():
+def preview_dataset(config: DataConfig):
     """Training images before resize and normalization, for plotting."""
-    return SignDataset("train", transform=None)
+    return SignDataset(config.data_dir, "train", transform=None)
+
+
+def make_loader(dataset, config: DataConfig, shuffle: bool):
+    return DataLoader(
+        dataset,
+        batch_size=config.batch_size,
+        shuffle=shuffle,
+        num_workers=config.num_workers,
+        pin_memory=torch.cuda.is_available(),
+        persistent_workers=config.num_workers > 0,
+    )

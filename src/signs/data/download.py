@@ -8,7 +8,6 @@ ignores, so the repository itself stays small.
 import urllib.request
 from pathlib import Path
 
-DEST = Path("data") / "hf"
 BASE = "https://huggingface.co/datasets/tanganke/gtsrb/resolve/main/data"
 FILES = {
     "train.parquet": f"{BASE}/train-00000-of-00001.parquet",
@@ -16,17 +15,17 @@ FILES = {
 }
 
 
-def main():
-    DEST.mkdir(parents=True, exist_ok=True)
+def download(dest: Path) -> None:
+    """Fetch each table into dest, skipping a file that is already there."""
+    dest = Path(dest)
+    dest.mkdir(parents=True, exist_ok=True)
     for name, url in FILES.items():
-        path = DEST / name
+        path = dest / name
         if path.is_file() and path.stat().st_size > 1_000_000:
             print(f"already present: {path}")
             continue
         print(f"downloading {name}")
-        urllib.request.urlretrieve(url, path)
+        partial = path.with_suffix(".part")
+        urllib.request.urlretrieve(url, partial)
+        partial.replace(path)
         print(f"saved {path} ({path.stat().st_size} bytes)")
-
-
-if __name__ == "__main__":
-    main()
