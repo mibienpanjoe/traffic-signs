@@ -8,6 +8,7 @@ import torch.nn as nn
 from signs.config import Config
 from signs.data.dataset import load_splits, make_loader
 from signs.models.registry import build_model
+from signs.training.seed import seed_everything
 from signs.runs import CHECKPOINT_FILE, create_run_dir, pick_device, write_csv, write_json
 
 
@@ -41,11 +42,12 @@ def run_epoch(network, loader, criterion, device, optimizer=None):
 def train(config: Config, overwrite: bool = False) -> dict:
     """Train one run and write its folder. Returns the training summary."""
     run_dir = create_run_dir(config, overwrite=overwrite)
+    seed_everything(config.seed)
     device = pick_device()
-    print(f"run: {run_dir}   device: {device}")
+    print(f"run: {run_dir}   device: {device}   seed: {config.seed}")
 
     train_set, val_set, _ = load_splits(config.data)
-    train_loader = make_loader(train_set, config.data, shuffle=True)
+    train_loader = make_loader(train_set, config.data, shuffle=True, seed=config.seed)
     val_loader = make_loader(val_set, config.data, shuffle=False)
     print(f"train images: {len(train_set)}   val images: {len(val_set)}")
 

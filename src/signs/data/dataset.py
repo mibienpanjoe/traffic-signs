@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader, Dataset
 from signs.config import DataConfig
 from signs.data.splits import random_split_indices
 from signs.data.transforms import eval_transform, train_transform
+from signs.training.seed import loader_generator, worker_init_fn
 
 _TABLES = {}
 
@@ -76,7 +77,9 @@ def preview_dataset(config: DataConfig):
     return SignDataset(config.data_dir, "train", transform=None)
 
 
-def make_loader(dataset, config: DataConfig, shuffle: bool):
+def make_loader(dataset, config: DataConfig, shuffle: bool, seed: int | None = None):
+    """Batch a dataset. With a seed, the shuffle order and worker seeds repeat."""
+    generator = loader_generator(seed) if seed is not None else None
     return DataLoader(
         dataset,
         batch_size=config.batch_size,
@@ -84,4 +87,6 @@ def make_loader(dataset, config: DataConfig, shuffle: bool):
         num_workers=config.num_workers,
         pin_memory=torch.cuda.is_available(),
         persistent_workers=config.num_workers > 0,
+        generator=generator,
+        worker_init_fn=worker_init_fn,
     )
