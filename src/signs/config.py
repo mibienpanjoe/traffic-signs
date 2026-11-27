@@ -62,10 +62,27 @@ class ModelConfig:
 class TrainConfig:
     epochs: int = 5
     lr: float = 1e-3
+    # "constant" keeps lr for every epoch. "cosine" lowers it along half a
+    # cosine, from lr at the first epoch towards 0 after the last.
+    schedule: str = "constant"
+    # Stop when validation accuracy has not improved for this many epochs.
+    # 0 trains every epoch.
+    early_stopping_patience: int = 0
+    # Learning rate of the pretrained trunk, as a fraction of lr. When the
+    # trunk is trained, a smaller step keeps it close to its ImageNet weights
+    # while the new last layer learns at full speed.
+    backbone_lr_scale: float = 1.0
+    weight_decay: float = 0.0
 
     def __post_init__(self):
         if isinstance(self.epochs, int) and self.epochs < 1:
             raise ValueError(f"config key train.epochs must be at least 1, got {self.epochs}")
+        if self.schedule not in ("constant", "cosine"):
+            raise ValueError(
+                f"config key train.schedule must be constant or cosine, got {self.schedule!r}"
+            )
+        if isinstance(self.early_stopping_patience, int) and self.early_stopping_patience < 0:
+            raise ValueError("config key train.early_stopping_patience must be 0 or more")
 
 
 @dataclass
