@@ -1,4 +1,4 @@
-"""Score a trained run on the official GTSRB test set."""
+"""Score a trained run on its validation tracks and on the official GTSRB test set."""
 
 from pathlib import Path
 
@@ -8,11 +8,25 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
-from sklearn.metrics import classification_report, confusion_matrix  # noqa: E402
 
+from signs.analysis.metrics import (  # noqa: E402
+    classification_scores,
+    confusion,
+    most_confused_pairs,
+)
 from signs.class_names import CLASS_NAMES  # noqa: E402
-from signs.data.dataset import load_test_set, make_loader  # noqa: E402
+from signs.data.dataset import load_splits, make_loader  # noqa: E402
 from signs.runs import load_trained_model, pick_device, write_csv, write_json  # noqa: E402
+
+SUMMARY_KEYS = ("accuracy", "macro_precision", "macro_recall", "macro_f1")
+PAIR_FIELDS = [
+    "true_id",
+    "true_name",
+    "predicted_id",
+    "predicted_name",
+    "count",
+    "share_of_true",
+]
 
 
 def predict_all(network, loader, device):
@@ -25,59 +39,80 @@ def predict_all(network, loader, device):
     return np.array(truths), np.array(predictions)
 
 
+def _round(row: dict) -> dict:
+    return {k: round(v, 6) if isinstance(v, float) else v for k, v in row.items()}
+
+
+def plot_confusion(matrix: np.ndarray, accuracy: float, path: Path) -> None:
+    """Row-normalized confusion matrix with class names: each row sums to 1."""
+    totals = matrix.sum(axis=1, keepdims=True)
+    shares = np.divide(matrix, totals, out=np.zeros(matrix.shape), where=totals > 0)
+    ticks = [f"{i} {name}" for i, name in enumerate(CLASS_NAMES)]
+    figure, axis = plt.subplots(figsize=(14, 12))
+    image = axis.imshow(shares, cmap="Blues", vmin=0, vmax=1)
+    axis.set_xticks(range(len(ticks)), ticks, rotation=90, fontsize=6)
+    axis.set_yticks(range(len(ticks)), ticks, fontsize=6)
+    axis.set_title(f"Test confusion matrix, share of each true class (accuracy {accuracy:.1%})")
+    axis.set_xlabel("predicted class")
+    axis.set_ylabel("true class")
+    figure.colorbar(image, ax=axis, fraction=0.046)
+    figure.tight_layout()
+    figure.savefig(path, dpi=130)
+    plt.close(figure)
+
+
 def evaluate(run_dir: Path) -> dict:
-    """Write metrics.json, per_class.csv, the text report and the confusion matrix."""
+    """Score validation and test, and write the run's evaluation files.
+
+    metrics.json         accuracy and macro scores, for validation and test
+    per_class.csv        test precision, recall, F1 and support per class
+    confused_pairs.csv   the most frequent test mistakes, with names
+    confusion_matrix.png row-normalized, with names
+    """
     run_dir = Path(run_dir)
     device = pick_device()
     network, config = load_trained_model(run_dir, device)
-    test_set = load_test_set(config.data)
-    loader = make_loader(test_set, config.data, shuffle=False)
+    _, val_set, test_set = load_splits(config.data)
 
-    truths, predictions = predict_all(network, loader, device)
-    labels = list(range(len(CLASS_NAMES)))
-    accuracy = float(np.mean(predictions == truths))
-    report_kwargs = dict(labels=labels, target_names=CLASS_NAMES, zero_division=0)
-    report = classification_report(truths, predictions, digits=3, **report_kwargs)
-    scores = classification_report(truths, predictions, output_dict=True, **report_kwargs)
+    results = {}
+    for name, dataset in (("val", val_set), ("test", test_set)):
+        loader = make_loader(dataset, config.data, shuffle=False)
+        truths, predictions = predict_all(network, loader, device)
+        results[name] = (truths, predictions, classification_scores(truths, predictions))
 
-    print(f"test images: {len(test_set)}")
-    print(f"test accuracy: {accuracy:.3f}")
-    print(report)
+    truths, predictions, test_scores = results["test"]
+    val_scores = results["val"][2]
+    matrix = confusion(truths, predictions)
+    pairs = most_confused_pairs(matrix, top=15)
 
     metrics = {
         "run_name": config.run_name,
-        "test_images": len(test_set),
-        "accuracy": accuracy,
-        "macro_precision": scores["macro avg"]["precision"],
-        "macro_recall": scores["macro avg"]["recall"],
-        "macro_f1": scores["macro avg"]["f1-score"],
+        "seed": config.seed,
+        "split": config.data.split,
+        "val": {"images": len(val_set), **{k: val_scores[k] for k in SUMMARY_KEYS}},
+        "test": {"images": len(test_set), **{k: test_scores[k] for k in SUMMARY_KEYS}},
     }
     write_json(run_dir / "metrics.json", metrics)
-    write_csv(
-        run_dir / "per_class.csv",
-        [
-            {
-                "class_id": class_id,
-                "name": name,
-                "precision": round(scores[name]["precision"], 6),
-                "recall": round(scores[name]["recall"], 6),
-                "f1": round(scores[name]["f1-score"], 6),
-                "support": int(scores[name]["support"]),
-            }
-            for class_id, name in enumerate(CLASS_NAMES)
-        ],
-    )
-    (run_dir / "classification_report.txt").write_text(f"test accuracy: {accuracy:.3f}\n\n{report}")
+    write_csv(run_dir / "per_class.csv", [_round(row) for row in test_scores["per_class"]])
+    write_csv(run_dir / "confused_pairs.csv", pairs, fieldnames=PAIR_FIELDS)
+    plot_confusion(matrix, test_scores["accuracy"], run_dir / "confusion_matrix.png")
 
-    matrix = confusion_matrix(truths, predictions, labels=labels)
-    figure, axis = plt.subplots(figsize=(10, 8))
-    image = axis.imshow(matrix, cmap="Blues")
-    axis.set_title(f"Test confusion matrix  (accuracy {accuracy:.1%})")
-    axis.set_xlabel("predicted class id")
-    axis.set_ylabel("true class id")
-    figure.colorbar(image, ax=axis, fraction=0.046)
-    figure.tight_layout()
-    figure.savefig(run_dir / "confusion_matrix.png", dpi=120)
-    plt.close(figure)
-    print(f"saved metrics, per-class scores and confusion matrix in {run_dir}")
+    print(f"split: {config.data.split}")
+    for name in ("val", "test"):
+        scores = metrics[name]
+        print(
+            f"{name:>4}  {scores['images']:>6} images  "
+            f"accuracy {scores['accuracy']:.3f}  macro-F1 {scores['macro_f1']:.3f}"
+        )
+    weakest = sorted(test_scores["per_class"], key=lambda row: row["recall"])[:5]
+    print("lowest test recall:")
+    for row in weakest:
+        print(f"  {row['recall']:.3f}  {row['name']} ({row['support']} images)")
+    print("most confused (true -> predicted):")
+    for pair in pairs[:5]:
+        print(
+            f"  {pair['count']:>4}  {pair['true_name']} -> {pair['predicted_name']}"
+            f"  ({pair['share_of_true']:.1%} of {pair['true_name']})"
+        )
+    print(f"saved metrics, per-class scores, confused pairs and confusion matrix in {run_dir}")
     return metrics
