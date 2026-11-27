@@ -153,7 +153,11 @@ Forward pass, in one sentence: the frozen trunk turns a 64×64 photo into a feat
 
 **Macro average** in the report is the unweighted mean across the 43 classes. It drops if rare classes fail, even when overall accuracy stays high. That is the number to mention next to accuracy.
 
-The **confusion matrix** is a 43×43 grid. Row is the true class, column is the predicted class. A clean model is bright on the diagonal. Off-diagonal spots are the mistakes worth showing in a presentation (speed limits confused with each other is the usual one, because they share a shape and differ by digits).
+The **confusion matrix** is a 43×43 grid. Row is the true class, column is the predicted class. `confusion_matrix.png` shows each row as shares of that true class, so a rare class is as visible as a common one. A clean model is bright on the diagonal. Off-diagonal spots are the mistakes worth showing in a presentation (speed limits confused with each other is the usual one, because they share a shape and differ by digits).
+
+`confused_pairs.csv` lists the largest off-diagonal cells: true class, predicted class, how many images, and what share of the true class that is. `signs eval` prints the five worst pairs and the five classes with the lowest recall.
+
+`metrics.json` has the same scores for the validation tracks and for the test set. With the track split they should be close. A validation score far above the test score means validation is leaking.
 
 ## 8. One image
 

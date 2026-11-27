@@ -17,7 +17,8 @@ The study notes, with the libraries and the training concepts, are in [GUIDE.md]
 | `src/signs/data/` | Download, load, split, augment, and batch the photos |
 | `src/signs/models/` | The network, built from its config name |
 | `src/signs/training/` | Training loop and seeding |
-| `src/signs/evaluate.py` | Accuracy, macro-F1, per-class report, confusion matrix |
+| `src/signs/evaluate.py` | Validation and test scores, per-class report, confused pairs, confusion matrix |
+| `src/signs/analysis/metrics.py` | Accuracy, macro-F1, per-class scores, most-confused pairs |
 | `src/signs/predict.py` | Classify one image |
 | `src/signs/runs.py` | Where a run writes its files, and how a trained run is loaded back |
 | `src/signs/class_names.py` | The 43 names, in official id order |
@@ -55,9 +56,11 @@ Each training run gets its own folder, `runs/<run_name>/`:
 | `history.csv` | `train` | Loss, accuracy, learning rate and time per epoch |
 | `model.pt` | `train` | Weights with the best validation accuracy |
 | `train_summary.json` | `train` | Best epoch and its validation scores |
-| `metrics.json` | `eval` | Test accuracy, macro precision, recall and F1 |
-| `per_class.csv` | `eval` | Test precision, recall and F1 for every class |
-| `classification_report.txt`, `confusion_matrix.png` | `eval` | The same, for reading |
+| `metrics.json` | `eval` | Accuracy and macro precision, recall and F1, on validation and on test |
+| `per_class.csv` | `eval` | Test precision, recall, F1 and image count for every class |
+| `confused_pairs.csv` | `eval` | The most frequent test mistakes, true class → predicted class, with names |
+| `confusion_matrix.png` | `eval` | Test confusion matrix with class names, each row as shares of the true class |
+| `classification_report.txt` | `eval` | The per-class test scores, for reading |
 
 The test images are not used to choose the checkpoint. `eval` and `predict` rebuild the model from the run's own `config.yaml`.
 

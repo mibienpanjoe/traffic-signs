@@ -4,8 +4,9 @@ config.yaml          the full resolved config the run used
 history.csv          one row per epoch
 model.pt             weights with the best validation accuracy
 train_summary.json   best epoch and its validation scores
-metrics.json         test scores, written by `signs eval`
+metrics.json         validation and test scores, written by `signs eval`
 per_class.csv        test precision, recall and F1 per class
+confused_pairs.csv   the most frequent test mistakes
 """
 
 import csv
@@ -26,6 +27,7 @@ RUN_FILES = (
     "train_summary.json",
     "metrics.json",
     "per_class.csv",
+    "confused_pairs.csv",
     "classification_report.txt",
     "confusion_matrix.png",
 )
@@ -59,11 +61,14 @@ def write_json(path: Path, values: dict) -> None:
     path.write_text(json.dumps(values, indent=2) + "\n")
 
 
-def write_csv(path: Path, rows: list[dict]) -> None:
-    if not rows:
-        return
+def write_csv(path: Path, rows: list[dict], fieldnames: list[str] | None = None) -> None:
+    """Write rows as CSV. With fieldnames, an empty list still writes the header."""
+    if fieldnames is None:
+        if not rows:
+            return
+        fieldnames = list(rows[0])
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 

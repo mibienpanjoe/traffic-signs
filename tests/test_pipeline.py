@@ -31,8 +31,13 @@ def test_train_eval_predict_write_the_run_folder(tiny_config, fake_data_dir, tmp
     metrics = evaluate(run_dir)
     saved = json.loads((run_dir / "metrics.json").read_text())
     assert saved == metrics
-    assert 0.0 <= saved["accuracy"] <= 1.0
-    assert set(saved) >= {"accuracy", "macro_f1", "macro_precision", "macro_recall"}
+    for part in ("val", "test"):
+        assert 0.0 <= saved[part]["accuracy"] <= 1.0
+        assert set(saved[part]) >= {"accuracy", "macro_f1", "macro_precision", "macro_recall"}
+    assert saved["test"]["images"] == len(CLASS_NAMES)
+    assert saved["split"] == "random"
+    assert (run_dir / "confused_pairs.csv").exists()
+    assert (run_dir / "classification_report.txt").read_text().startswith("test accuracy:")
     with (run_dir / "per_class.csv").open() as handle:
         assert len(list(csv.DictReader(handle))) == len(CLASS_NAMES)
     assert (run_dir / "confusion_matrix.png").is_file()
