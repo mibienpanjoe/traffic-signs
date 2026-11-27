@@ -8,40 +8,65 @@ The study notes, with the libraries and the training concepts, are in [GUIDE.md]
 
 ## Layout
 
-| File | Role |
+| Path | Role |
 |---|---|
-| `download_data.py` | Fetch the dataset into `data/hf/` |
-| `explore.py` | Class counts and a contact sheet of the signs |
-| `data.py` | Load, augment, and batch the photos |
-| `model.py` | The network |
-| `train.py` | Train and save the best weights |
-| `evaluate.py` | Accuracy, per-class report, confusion matrix |
-| `predict.py` | Classify one image |
-| `class_names.py` | The 43 names, in official id order |
+| `src/signs/cli.py` | The `signs` command: `download`, `explore`, `train`, `eval`, `predict` |
+| `src/signs/config.py` | One config object, read from YAML, with `--set key=value` overrides |
+| `src/signs/data/` | Download, load, split, augment, and batch the photos |
+| `src/signs/models/` | The network, built from its config name |
+| `src/signs/training/` | Training loop and seeding |
+| `src/signs/evaluate.py` | Accuracy, macro-F1, per-class report, confusion matrix |
+| `src/signs/predict.py` | Classify one image |
+| `src/signs/runs.py` | Where a run writes its files, and how a trained run is loaded back |
+| `src/signs/class_names.py` | The 43 names, in official id order |
+| `configs/` | `base.yaml` defaults and one file per experiment |
 
-`data/` and `outputs/` are created on your machine and are listed in `.gitignore`. The dataset is a few hundred megabytes. The checkpoint and plots are produced by the scripts.
+`data/` and `runs/` are created on your machine and are listed in `.gitignore`. The dataset is a few hundred megabytes. Checkpoints, histories and plots are produced by the commands.
 
 ## Setup
 
-Python 3.10 or newer. PyTorch is required. On a machine that already has it:
+Python 3.10 or newer and [uv](https://docs.astral.sh/uv/). Dependencies are pinned in `uv.lock`, and PyTorch comes from the CPU wheel index.
 
 ```bash
-python3 -m pip install -r requirements.txt
-python3 download_data.py
+uv sync
+uv run signs download
 ```
 
-`download_data.py` skips a file that is already downloaded. This copy has 26,640 training photos and 12,630 test photos, 43 classes.
+`signs download` skips a file that is already downloaded. This copy has 26,640 training photos and 12,630 test photos, 43 classes.
+
+Without uv, `python3 -m pip install -e .` installs the same package and the `signs` command, with unpinned versions.
 
 ## Run
 
 ```bash
-python3 explore.py
-python3 train.py --epochs 5
-python3 evaluate.py
-python3 predict.py path/to/a_sign.jpg
+uv run signs explore
+uv run signs train --config configs/mobilenet_frozen.yaml
+uv run signs eval --run runs/mobilenet_frozen
+uv run signs predict path/to/a_sign.jpg --run runs/mobilenet_frozen
 ```
 
-Training writes `outputs/model.pt` whenever validation accuracy improves. Evaluation reads that file and writes `outputs/classification_report.txt` and `outputs/confusion_matrix.png`. The test images are not used to choose the checkpoint.
+Each training run gets its own folder, `runs/<run_name>/`:
+
+| File | Written by | Content |
+|---|---|---|
+| `config.yaml` | `train` | The full resolved config the run used |
+| `history.csv` | `train` | Loss, accuracy, learning rate and time per epoch |
+| `model.pt` | `train` | Weights with the best validation accuracy |
+| `train_summary.json` | `train` | Best epoch and its validation scores |
+| `metrics.json` | `eval` | Test accuracy, macro precision, recall and F1 |
+| `per_class.csv` | `eval` | Test precision, recall and F1 for every class |
+| `classification_report.txt`, `confusion_matrix.png` | `eval` | The same, for reading |
+
+The test images are not used to choose the checkpoint. `eval` and `predict` rebuild the model from the run's own `config.yaml`.
+
+Change one value without a new file, or repeat a run with another seed:
+
+```bash
+uv run signs train --set train.epochs=10 --run-name frozen-10ep
+uv run signs train --seed 1 --run-name mobilenet_frozen-seed1
+```
+
+On a CPU, the same seed gives the same weights and the same numbers. On a GPU, repeats are close but not guaranteed to be exact. The validation split has its own `data.split_seed`, so changing the training seed does not change which images are held out. `train` refuses to replace a finished run unless you pass `--overwrite`.
 
 There is no GPU requirement. Five epochs on a CPU is the intended first run.
 
@@ -52,3 +77,7 @@ Natural next steps, without changing the problem:
 - Train the convolutional layers as well, with a smaller learning rate.
 - Compare this frozen MobileNetV2 with a small network trained from scratch.
 - Show the per-class errors, especially speed limits, which share a shape and differ by the digits.
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).

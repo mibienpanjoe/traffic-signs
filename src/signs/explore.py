@@ -3,16 +3,19 @@
 from collections import Counter
 from pathlib import Path
 
-import matplotlib.pyplot as plt
+import matplotlib
 
-from class_names import CLASS_NAMES
-from data import preview_dataset
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
 
-OUTPUT = Path(__file__).resolve().parent / "outputs"
+from signs.class_names import CLASS_NAMES  # noqa: E402
+from signs.config import DataConfig  # noqa: E402
+from signs.data.dataset import preview_dataset  # noqa: E402
 
 
-def main():
-    dataset = preview_dataset()
+def explore(config: DataConfig, output: Path) -> Path:
+    """Print class counts and save one photo per class. Returns the figure path."""
+    dataset = preview_dataset(config)
     labels = dataset.labels
     counts = Counter(labels)
 
@@ -34,7 +37,8 @@ def main():
         if len(first_index) == len(CLASS_NAMES):
             break
 
-    OUTPUT.mkdir(exist_ok=True)
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
     figure, axes = plt.subplots(6, 8, figsize=(12, 9))
     for axis, class_id in zip(axes.ravel(), range(len(CLASS_NAMES))):
         image, label = dataset[first_index[class_id]]
@@ -45,10 +49,8 @@ def main():
         axis.axis("off")
     figure.suptitle("One training photo per class (title is the class id)")
     figure.tight_layout()
-    figure_path = OUTPUT / "sample_signs.png"
+    figure_path = output / "sample_signs.png"
     figure.savefig(figure_path, dpi=120)
+    plt.close(figure)
     print(f"saved {figure_path}")
-
-
-if __name__ == "__main__":
-    main()
+    return figure_path

@@ -1,0 +1,27 @@
+# Defaults shared by every experiment. Other configs name this file as
+# their `base` and list only what they change.
+run_name: base
+seed: 42
+runs_dir: runs
+
+data:
+  data_dir: data/hf
+  image_size: 64
+  batch_size: 64
+  val_fraction: 0.2
+  split_seed: 42
+  num_workers: 0
+  augment:
+    rotation_degrees: 15
+    brightness: 0.3
+    contrast: 0.3
+    saturation: 0.2
+
+model:
+  name: mobilenet_v2
+  pretrained: true
+  freeze_features: true
+
+train:
+  epochs: 5
+  lr: 0.001

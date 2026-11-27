@@ -1,8 +1,9 @@
-# Dataset. Download with download_data.py. Too large to publish.
-data/
+# Dataset. Download with `signs download`. Too large to publish.
+/data/
 
-# Training plots, reports, and weights.
-outputs/
+# Training runs: weights, histories, metrics and plots.
+/runs/
+/outputs/
 
 # Local environments and caches.
 __pycache__/
@@ -11,3 +12,7 @@ __pycache__/
 venv/
 .env
 .mplconfig/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/

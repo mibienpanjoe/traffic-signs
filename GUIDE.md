@@ -17,20 +17,23 @@ Finding the sign inside a full street photo is a different problem (object detec
 
 | File | Role |
 |---|---|
-| `download_data.py` | Fetch the two Parquet tables into `data/hf/` |
-| `class_names.py` | The 43 names, in the official id order (0 = Speed limit 20, 14 = Stop, …) |
-| `data.py` | Resize, augment, and batch the images |
-| `model.py` | The neural network |
-| `explore.py` | Look at the data before training |
-| `train.py` | Fit the network and save the best weights |
-| `evaluate.py` | Score those weights on images the network never trained on |
-| `predict.py` | Classify one photo |
+| `src/signs/data/download.py` | Fetch the two Parquet tables into `data/hf/` |
+| `src/signs/class_names.py` | The 43 names, in the official id order (0 = Speed limit 20, 14 = Stop, …) |
+| `src/signs/data/transforms.py` | Resize and augment the images |
+| `src/signs/data/dataset.py`, `splits.py` | Read the tables, hold out validation, batch |
+| `src/signs/models/` | The neural network |
+| `src/signs/explore.py` | Look at the data before training |
+| `src/signs/training/trainer.py` | Fit the network and save the best weights |
+| `src/signs/evaluate.py` | Score those weights on images the network never trained on |
+| `src/signs/predict.py` | Classify one photo |
+| `src/signs/config.py`, `configs/` | Every setting (image size, learning rate, seed…) in one place |
+| `src/signs/cli.py` | The `signs` command that runs each step |
 
-`data/` holds the downloaded images. `outputs/` holds the plot, the saved weights, and the test report. Both are listed in `.gitignore`, so they stay on this machine when the code is published. The plots and the accuracy numbers belong in a write-up. The raw files do not.
+`data/` holds the downloaded images. `runs/<run_name>/` holds the saved weights, the training history, and the test report of one run. Both are listed in `.gitignore`, so they stay on this machine when the code is published. The plots and the accuracy numbers belong in a write-up. The raw files do not.
 
 ## 1. The learning problem
 
-Each example is a pair `(image, class id)`. The class id is an integer from 0 to 42. The network does not output the name directly. It outputs 43 numbers, called **logits**. The largest logit is the predicted class. A **softmax** turns those logits into probabilities that add up to 1, which is what `predict.py` prints.
+Each example is a pair `(image, class id)`. The class id is an integer from 0 to 42. The network does not output the name directly. It outputs 43 numbers, called **logits**. The largest logit is the predicted class. A **softmax** turns those logits into probabilities that add up to 1, which is what `signs predict` prints.
 
 This is **supervised classification**: every training photo already has the correct label. The dataset authors labeled them. We do not invent labels.
 
@@ -71,9 +74,9 @@ The classic zip has about 39,000 training photos. This release is smaller and is
 
 The classes are unbalanced. In this training table, Speed limit 30 and Speed limit 50 have 1,500 photos each. Speed limit 20, Curve left, and Straight or left have 150. A single accuracy number can look strong while a rare class is weak, which is why the evaluation report lists every class.
 
-Images are `.ppm` files of different sizes, often small (around 30 to 100 pixels). The network needs one fixed size, so every photo is resized to 64×64.
+Images are `.ppm` files of different sizes, often small (around 30 to 100 pixels). The network needs one fixed size, so every photo is resized to 64×64 (`data.image_size` in the config).
 
-The official **test split stays untouched** until `evaluate.py`. During training we hold out 20% of the training images as a **validation set**. Validation tells us when to keep a checkpoint. The test set is the number you report, because the network never used it to update weights or to pick a checkpoint.
+The official **test split stays untouched** until `signs eval`. During training we hold out 20% of the training images as a **validation set**. Validation tells us when to keep a checkpoint. The test set is the number you report, because the network never used it to update weights or to pick a checkpoint.
 
 ## 4. From a photo to a tensor
 
@@ -92,7 +95,7 @@ A color photo is height × width × 3 (red, green, blue), values 0–255. The ne
 
 There is no horizontal flip. A mirrored "turn right" is a different sign. Augmentation has to preserve the label.
 
-A **DataLoader** stacks images into a batch. With `BATCH_SIZE = 64`, each training step sees a tensor of shape `64 × 3 × 64 × 64` and a label vector of length 64. Shuffle is on for training, off for validation and test, so the score does not depend on order.
+A **DataLoader** stacks images into a batch. With `data.batch_size: 64`, each training step sees a tensor of shape `64 × 3 × 64 × 64` and a label vector of length 64. Shuffle is on for training, off for validation and test, so the score does not depend on order.
 
 ## 5. The network
 
@@ -120,11 +123,11 @@ Forward pass, in one sentence: the frozen trunk turns a 64×64 photo into a feat
 - Validation accuracy should rise, then flatten.
 - If train accuracy keeps climbing while validation accuracy falls, the model is memorizing. Five epochs with a frozen trunk usually does not do that.
 
-`train.py` writes `outputs/model.pt` whenever validation accuracy improves. The file contains the weights (`state_dict`) and the validation accuracy at that moment. Later scripts load those weights. They do not keep training.
+`signs train` writes `runs/<run_name>/model.pt` whenever validation accuracy improves, and one line per epoch to `history.csv`. The file contains the weights (`state_dict`) and the validation accuracy at that moment. Later scripts load those weights. They do not keep training.
 
 ## 7. Evaluation
 
-`evaluate.py` loads the checkpoint, runs the official test set with no gradient and no augmentation, and compares predicted ids with true ids.
+`signs eval` loads the checkpoint, runs the official test set with no gradient and no augmentation, and compares predicted ids with true ids.
 
 **Accuracy** is the fraction of test images where the predicted id equals the true id. It is the headline number.
 
@@ -138,21 +141,22 @@ The **confusion matrix** is a 43×43 grid. Row is the true class, column is the 
 
 ## 8. One image
 
-`predict.py` opens a file, applies `eval_transform` (never the random training transform), adds a batch dimension with `unsqueeze(0)`, and runs the network. Softmax turns logits into probabilities. The top three are printed so a near-tie is visible, not only the winner.
+`signs predict` opens a file, applies `eval_transform` (never the random training transform), adds a batch dimension with `unsqueeze(0)`, and runs the network. Softmax turns logits into probabilities. The top three are printed so a near-tie is visible, not only the winner.
 
 ## Commands
 
-From this directory:
+From the repository root:
 
 ```bash
-python3 download_data.py
-python3 explore.py
-python3 train.py --epochs 5
-python3 evaluate.py
-python3 predict.py path/to/a_sign.jpg
+uv sync
+uv run signs download
+uv run signs explore
+uv run signs train --config configs/mobilenet_frozen.yaml
+uv run signs eval --run runs/mobilenet_frozen
+uv run signs predict path/to/a_sign.jpg --run runs/mobilenet_frozen
 ```
 
-`download_data.py` writes `data/hf/train.parquet` and `data/hf/test.parquet`. If those files are already present, it leaves them alone.
+`signs download` writes `data/hf/train.parquet` and `data/hf/test.parquet`. If those files are already present, it leaves them alone.
 
 ## How to talk about it
 
@@ -160,7 +164,7 @@ One possible closing sentence for the presentation:
 
 > We trained a MobileNetV2 classifier on GTSRB. The convolutional features come from ImageNet and stay frozen. A new 43-way layer is trained with cross-entropy. On the official test set the accuracy is X, and the main confusions are between similar speed-limit signs.
 
-Fill in X after `evaluate.py`.
+Fill in X from `metrics.json` after `signs eval`.
 
 ## Glossary
 
