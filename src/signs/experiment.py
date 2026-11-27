@@ -22,6 +22,20 @@ def seed_run(config: Config, seed: int) -> Config:
     return run
 
 
+def same_training(saved: Config, wanted: Config) -> bool:
+    """Whether a saved run was trained the way `wanted` asks.
+
+    Where the files live (data_dir, runs_dir) does not change the weights,
+    so it is left out. num_workers stays in: each worker draws its own
+    augmentations, so the worker count changes the numbers.
+    """
+    saved, wanted = copy.deepcopy(saved), copy.deepcopy(wanted)
+    for config in (saved, wanted):
+        config.runs_dir = ""
+        config.data.data_dir = ""
+    return saved == wanted
+
+
 def run_experiment(
     config: Config, seeds: list[int], results_dir: Path, overwrite: bool = False
 ) -> dict:
@@ -33,16 +47,19 @@ def run_experiment(
     run_dirs = []
     for seed in seeds:
         run = seed_run(config, seed)
-        done = (run.run_dir / CHECKPOINT_FILE).is_file() and (
-            run.run_dir / "metrics.json"
-        ).is_file()
-        if done and not overwrite:
-            if load_run_config(run.run_dir) != run:
+        trained = (run.run_dir / CHECKPOINT_FILE).is_file()
+        evaluated = (run.run_dir / "metrics.json").is_file()
+        if trained and not overwrite:
+            if not same_training(load_run_config(run.run_dir), run):
                 raise ValueError(
                     f"{run.run_dir} was trained with another config. "
                     "Pass --overwrite to retrain it, or pick another run_name."
                 )
-            print(f"{run.run_dir}: already trained and evaluated, skipping")
+            if evaluated:
+                print(f"{run.run_dir}: already trained and evaluated, skipping")
+            else:
+                print(f"{run.run_dir}: already trained, evaluating")
+                evaluate(run.run_dir)
         else:
             train(run, overwrite=True)
             evaluate(run.run_dir)

@@ -138,6 +138,15 @@ def test_experiment_runs_each_seed_once_and_summarizes(tiny_config, tmp_path, ca
         run_experiment(tiny_config, [0, 1], results)
     tiny_config.train.lr = 0.001
 
+    # A trained seed that lost its evaluation is evaluated, not retrained.
+    seed0 = tiny_config.run_dir.parent / "tiny-seed0"
+    weights = (seed0 / "model.pt").read_bytes()
+    (seed0 / "metrics.json").unlink()
+    capsys.readouterr()
+    run_experiment(tiny_config, [0, 1], results)
+    assert "already trained, evaluating" in capsys.readouterr().out
+    assert (seed0 / "model.pt").read_bytes() == weights
+
     table = write_table([results / "tiny.json"], results / "table")
     assert "| tiny | random | 2 |" in table
     assert (results / "table.csv").is_file() and (results / "table.md").is_file()
