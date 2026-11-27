@@ -1,0 +1,7 @@
+# The frozen MobileNetV2 with the old random frame split. Frames of one
+# track land on both sides, so validation is inflated. Kept only to
+# measure by how much, against mobilenet_frozen.yaml.
+base: mobilenet_frozen.yaml
+run_name: mobilenet_frozen_random_split
+data:
+  split: random
