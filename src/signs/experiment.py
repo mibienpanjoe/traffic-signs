@@ -2,7 +2,8 @@
 
 Each seed is an ordinary run in runs/<run_name>-seed<N>/. A seed whose run
 is already trained and evaluated is skipped, so an interrupted experiment
-picks up where it stopped. The summary goes to <results_dir>/<run_name>.json.
+picks up where it stopped. A finished seed trained with a different
+config is an error, not a silent reuse. The summary goes to <results_dir>/<run_name>.json.
 """
 
 import copy
@@ -11,7 +12,7 @@ from pathlib import Path
 
 from signs.analysis.aggregate import aggregate_runs, markdown_table
 from signs.config import Config
-from signs.runs import CHECKPOINT_FILE, write_csv, write_json
+from signs.runs import CHECKPOINT_FILE, load_run_config, write_csv, write_json
 
 
 def seed_run(config: Config, seed: int) -> Config:
@@ -36,6 +37,11 @@ def run_experiment(
             run.run_dir / "metrics.json"
         ).is_file()
         if done and not overwrite:
+            if load_run_config(run.run_dir) != run:
+                raise ValueError(
+                    f"{run.run_dir} was trained with another config. "
+                    "Pass --overwrite to retrain it, or pick another run_name."
+                )
             print(f"{run.run_dir}: already trained and evaluated, skipping")
         else:
             train(run, overwrite=True)

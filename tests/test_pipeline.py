@@ -133,6 +133,11 @@ def test_experiment_runs_each_seed_once_and_summarizes(tiny_config, tmp_path, ca
     assert again == summary
     assert capsys.readouterr().out.count("skipping") == 2
 
+    tiny_config.train.lr = 0.01
+    with pytest.raises(ValueError, match="trained with another config"):
+        run_experiment(tiny_config, [0, 1], results)
+    tiny_config.train.lr = 0.001
+
     table = write_table([results / "tiny.json"], results / "table")
     assert "| tiny | random | 2 |" in table
     assert (results / "table.csv").is_file() and (results / "table.md").is_file()
