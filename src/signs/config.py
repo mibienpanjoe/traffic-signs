@@ -83,17 +83,18 @@ def _merge(base: dict, update: dict) -> dict:
     return merged
 
 
-def _read_yaml(path: Path) -> dict:
+def _read_yaml(path: Path, seen: tuple[Path, ...] = ()) -> dict:
+    path = path.resolve()
+    if path in seen:
+        chain = " -> ".join(str(p) for p in (*seen, path))
+        raise ValueError(f"config files name each other as base: {chain}")
     raw = yaml.safe_load(path.read_text()) or {}
     if not isinstance(raw, dict):
         raise ValueError(f"{path} must contain a mapping at the top level")
     base_name = raw.pop("base", None)
     if base_name is None:
         return raw
-    base_path = (path.parent / base_name).resolve()
-    if base_path == path.resolve():
-        raise ValueError(f"{path} names itself as its base")
-    return _merge(_read_yaml(base_path), raw)
+    return _merge(_read_yaml(path.parent / base_name, (*seen, path)), raw)
 
 
 def _build(cls, values: dict, where: str):
