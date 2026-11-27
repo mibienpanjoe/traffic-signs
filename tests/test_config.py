@@ -51,3 +51,13 @@ def test_saved_config_round_trips(tmp_path):
 def test_wrong_type_is_rejected():
     with pytest.raises(ValueError, match="train.epochs expects int"):
         load_config(None, ["train.epochs=five"])
+
+
+@pytest.mark.parametrize("name", ["2024", "001", "yes", "null"])
+def test_text_override_stays_text(name):
+    assert load_config(None, [f"run_name={name}"]).run_name == name
+
+
+def test_scalar_for_a_section_is_rejected():
+    with pytest.raises(ValueError, match="data expects a mapping"):
+        load_config(None, ["data=5"])
