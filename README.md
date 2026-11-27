@@ -75,6 +75,18 @@ On a CPU, the same seed gives the same weights and the same numbers. On a GPU, r
 
 There is no GPU requirement. Five epochs on a CPU is the intended first run.
 
+### Several seeds
+
+One run is one draw. Results are reported as mean ± standard deviation over seeds:
+
+```bash
+uv run signs experiment --config configs/mobilenet_frozen.yaml --seeds 0 1 2
+uv run signs table results/mobilenet_frozen.json results/mobilenet_frozen_random_split.json \
+    --out results/split_comparison
+```
+
+`experiment` trains and evaluates `runs/<run_name>-seed<N>/` for each seed, skips seeds that are already done, and writes `results/<run_name>.json`. `table` collects several of those into one CSV and Markdown table. `results/` is committed and holds only these small files.
+
 ## Development
 
 ```bash
