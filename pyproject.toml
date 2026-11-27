@@ -3,6 +3,8 @@ name = "signs"
 version = "0.1.0"
 description = "Traffic-sign recognition on GTSRB."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
     "matplotlib>=3.8,<4",
@@ -19,7 +21,7 @@ dependencies = [
 signs = "signs.cli:main"
 
 [build-system]
-requires = ["hatchling>=1.25"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
