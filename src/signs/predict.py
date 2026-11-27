@@ -6,11 +6,11 @@ from pathlib import Path
 import torch
 from PIL import Image
 
-from class_names import CLASS_NAMES
-from data import eval_transform
-from model import build_model
+from signs.class_names import CLASS_NAMES
+from signs.data.dataset import eval_transform
+from signs.models.mobilenet import build_model
 
-CHECKPOINT = Path(__file__).resolve().parent / "outputs" / "model.pt"
+CHECKPOINT = Path("outputs") / "model.pt"
 
 
 def main():

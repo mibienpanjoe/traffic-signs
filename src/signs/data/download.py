@@ -8,8 +8,7 @@ ignores, so the repository itself stays small.
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-DEST = ROOT / "data" / "hf"
+DEST = Path("data") / "hf"
 BASE = "https://huggingface.co/datasets/tanganke/gtsrb/resolve/main/data"
 FILES = {
     "train.parquet": f"{BASE}/train-00000-of-00001.parquet",

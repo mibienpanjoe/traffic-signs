@@ -6,10 +6,10 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-from data import load_splits, make_loader
-from model import build_model
+from signs.data.dataset import load_splits, make_loader
+from signs.models.mobilenet import build_model
 
-OUTPUT = Path(__file__).resolve().parent / "outputs"
+OUTPUT = Path("outputs")
 CHECKPOINT = OUTPUT / "model.pt"
 
 

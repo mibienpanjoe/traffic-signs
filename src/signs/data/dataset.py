@@ -14,8 +14,7 @@ from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
-ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "data" / "hf"
+DATA_DIR = Path("data") / "hf"
 IMAGE_SIZE = 64
 BATCH_SIZE = 64
 VAL_FRACTION = 0.2
@@ -62,7 +61,7 @@ def _table(split: str):
         path = DATA_DIR / f"{split}.parquet"
         if not path.is_file():
             raise FileNotFoundError(
-                f"Missing {path}. Run: python3 download_data.py"
+                f"Missing {path}. Run: python -m signs.data.download"
             )
         _TABLES[split] = pq.read_table(path)
     return _TABLES[split]

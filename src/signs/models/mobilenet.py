@@ -3,7 +3,7 @@
 import torch.nn as nn
 from torchvision.models import MobileNet_V2_Weights, mobilenet_v2
 
-from class_names import CLASS_NAMES
+from signs.class_names import CLASS_NAMES
 
 
 def build_model(freeze_features: bool = True) -> nn.Module:

@@ -5,10 +5,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-from class_names import CLASS_NAMES
-from data import preview_dataset
+from signs.class_names import CLASS_NAMES
+from signs.data.dataset import preview_dataset
 
-OUTPUT = Path(__file__).resolve().parent / "outputs"
+OUTPUT = Path("outputs")
 
 
 def main():

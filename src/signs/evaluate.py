@@ -7,11 +7,11 @@ import numpy as np
 import torch
 from sklearn.metrics import classification_report, confusion_matrix
 
-from class_names import CLASS_NAMES
-from data import load_splits, make_loader
-from model import build_model
+from signs.class_names import CLASS_NAMES
+from signs.data.dataset import load_splits, make_loader
+from signs.models.mobilenet import build_model
 
-OUTPUT = Path(__file__).resolve().parent / "outputs"
+OUTPUT = Path("outputs")
 CHECKPOINT = OUTPUT / "model.pt"
 
 
