@@ -82,6 +82,20 @@ def cmd_train(args) -> None:
     train(_config(args), overwrite=args.overwrite)
 
 
+def cmd_experiment(args) -> None:
+    from signs.experiment import run_experiment
+
+    run_experiment(_config(args), args.seeds, args.results, overwrite=args.overwrite)
+
+
+def cmd_table(args) -> None:
+    from signs.experiment import table_paths, write_table
+
+    print(write_table(args.summaries, args.out), end="")
+    csv_path, md_path = table_paths(args.out)
+    print(f"saved {csv_path} and {md_path}")
+
+
 def cmd_eval(args) -> None:
     from signs.evaluate import evaluate
 
@@ -121,6 +135,20 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--seed", type=int, help="override the training seed")
     train.add_argument("--overwrite", action="store_true", help="replace an existing run")
     train.set_defaults(func=cmd_train)
+
+    experiment = commands.add_parser(
+        "experiment", help="train and evaluate one config over several seeds"
+    )
+    _add_config_args(experiment)
+    experiment.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    experiment.add_argument("--results", type=Path, default=Path("results"))
+    experiment.add_argument("--overwrite", action="store_true", help="retrain finished seeds")
+    experiment.set_defaults(func=cmd_experiment)
+
+    table = commands.add_parser("table", help="collect experiment summaries into one table")
+    table.add_argument("summaries", type=Path, nargs="+", help="results/<name>.json files")
+    table.add_argument("--out", type=Path, default=Path("results/table"))
+    table.set_defaults(func=cmd_table)
 
     run_help = "run folder (default: the run of the default config)"
     evaluate = commands.add_parser("eval", help="score a run on the official test set")
