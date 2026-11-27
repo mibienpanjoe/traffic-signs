@@ -78,8 +78,9 @@ def cmd_eval(args) -> None:
 def cmd_predict(args) -> None:
     from signs.predict import predict
 
+    top = predict(_default_run(args), args.image, top_k=args.top_k)
     print(f"file: {args.image}")
-    for name, score in predict(_default_run(args), args.image, top_k=args.top_k):
+    for name, score in top:
         print(f"  {score:6.1%}  {name}")
 
 
