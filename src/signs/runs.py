@@ -18,6 +18,17 @@ from signs.config import Config, from_dict, save_config
 
 CONFIG_FILE = "config.yaml"
 CHECKPOINT_FILE = "model.pt"
+# Every file train and eval write. --overwrite removes these and nothing else.
+RUN_FILES = (
+    CONFIG_FILE,
+    CHECKPOINT_FILE,
+    "history.csv",
+    "train_summary.json",
+    "metrics.json",
+    "per_class.csv",
+    "classification_report.txt",
+    "confusion_matrix.png",
+)
 
 
 def create_run_dir(config: Config, overwrite: bool = False) -> Path:
@@ -27,6 +38,10 @@ def create_run_dir(config: Config, overwrite: bool = False) -> Path:
             f"{run_dir} already holds a trained model. "
             "Pick another --run-name or pass --overwrite."
         )
+    if overwrite:
+        # Old test scores or weights must not sit next to the new run's config.
+        for name in RUN_FILES:
+            (run_dir / name).unlink(missing_ok=True)
     run_dir.mkdir(parents=True, exist_ok=True)
     save_config(config, run_dir / CONFIG_FILE)
     return run_dir
