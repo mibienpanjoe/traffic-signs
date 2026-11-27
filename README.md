@@ -80,7 +80,7 @@ uv run pre-commit install   # ruff lint and format on every commit
 uv run pytest               # runs on a tiny fake dataset, no download
 ```
 
-CI runs the same lint and tests on every push and pull request, on Python 3.10 and 3.12.
+CI runs the same lint and tests on pushes to `main` and on every pull request, on Python 3.10 and 3.12.
 
 ## After the presentation
 
