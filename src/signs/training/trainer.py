@@ -8,8 +8,8 @@ import torch.nn as nn
 from signs.config import Config
 from signs.data.dataset import load_splits, make_loader
 from signs.models.registry import build_model
-from signs.training.seed import seed_everything
 from signs.runs import CHECKPOINT_FILE, create_run_dir, pick_device, write_csv, write_json
+from signs.training.seed import seed_everything
 
 
 def run_epoch(network, loader, criterion, device, optimizer=None):

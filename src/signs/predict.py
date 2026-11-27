@@ -25,5 +25,5 @@ def predict(run_dir: Path, image_path: Path, top_k: int = 3) -> list[tuple[str, 
     top = torch.topk(probabilities, k=top_k)
     return [
         (CLASS_NAMES[index], score)
-        for score, index in zip(top.values.tolist(), top.indices.tolist())
+        for score, index in zip(top.values.tolist(), top.indices.tolist(), strict=True)
     ]

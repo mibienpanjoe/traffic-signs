@@ -40,7 +40,7 @@ def explore(config: DataConfig, output: Path) -> Path:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     figure, axes = plt.subplots(6, 8, figsize=(12, 9))
-    for axis, class_id in zip(axes.ravel(), range(len(CLASS_NAMES))):
+    for axis, class_id in zip(axes.ravel(), range(len(CLASS_NAMES)), strict=False):
         image, label = dataset[first_index[class_id]]
         axis.imshow(image)
         axis.set_title(str(label), fontsize=8)

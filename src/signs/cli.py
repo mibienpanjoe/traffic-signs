@@ -1,10 +1,10 @@
 """The `signs` command: one entry point for every step of the pipeline.
 
-    signs download
-    signs explore
-    signs train   --config configs/mobilenet_frozen.yaml [--set train.epochs=10]
-    signs eval    --run runs/mobilenet_frozen
-    signs predict path/to/sign.jpg --run runs/mobilenet_frozen
+signs download
+signs explore
+signs train   --config configs/mobilenet_frozen.yaml [--set train.epochs=10]
+signs eval    --run runs/mobilenet_frozen
+signs predict path/to/sign.jpg --run runs/mobilenet_frozen
 """
 
 import argparse
