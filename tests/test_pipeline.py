@@ -114,3 +114,25 @@ def test_top_k_outside_the_classes_is_rejected(tiny_config, tmp_path):
     train(tiny_config)
     with pytest.raises(ValueError, match="--top-k must be between 1 and 43"):
         predict(tiny_config.run_dir, tmp_path / "unused.png", top_k=50)
+
+
+def test_experiment_runs_each_seed_once_and_summarizes(tiny_config, tmp_path, capsys):
+    from signs.experiment import run_experiment, write_table
+
+    tiny_config.train.epochs = 1
+    results = tmp_path / "results"
+    summary = run_experiment(tiny_config, [0, 1], results)
+    assert summary["seeds"] == 2
+    assert summary["runs"] == "tiny-seed0 tiny-seed1"
+    assert (results / "tiny.json").is_file()
+    for seed in (0, 1):
+        assert (tiny_config.run_dir.parent / f"tiny-seed{seed}" / "metrics.json").is_file()
+
+    capsys.readouterr()
+    again = run_experiment(tiny_config, [0, 1], results)
+    assert again == summary
+    assert capsys.readouterr().out.count("skipping") == 2
+
+    table = write_table([results / "tiny.json"], results / "table")
+    assert "| tiny | random | 2 |" in table
+    assert (results / "table.csv").is_file() and (results / "table.md").is_file()
