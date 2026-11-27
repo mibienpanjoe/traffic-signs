@@ -102,3 +102,9 @@ def test_cli_reports_a_missing_run_without_a_traceback(tmp_path, capsys):
         main(["eval", "--run", str(tmp_path / "missing")])
     assert stopped.value.code == 2
     assert "Train a run first" in capsys.readouterr().err
+
+
+def test_top_k_outside_the_classes_is_rejected(tiny_config, tmp_path):
+    train(tiny_config)
+    with pytest.raises(ValueError, match="--top-k must be between 1 and 43"):
+        predict(tiny_config.run_dir, tmp_path / "unused.png", top_k=50)

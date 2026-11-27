@@ -61,3 +61,15 @@ def test_text_override_stays_text(name):
 def test_scalar_for_a_section_is_rejected():
     with pytest.raises(ValueError, match="data expects a mapping"):
         load_config(None, ["data=5"])
+
+
+def test_zero_epochs_is_rejected():
+    with pytest.raises(ValueError, match="train.epochs must be at least 1"):
+        load_config(None, ["train.epochs=0"])
+
+
+def test_base_cycle_is_rejected(tmp_path):
+    (tmp_path / "a.yaml").write_text("base: b.yaml\n")
+    (tmp_path / "b.yaml").write_text("base: a.yaml\n")
+    with pytest.raises(ValueError, match="name each other as base"):
+        load_config(tmp_path / "a.yaml")
