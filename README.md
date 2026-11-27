@@ -66,7 +66,7 @@ uv run signs train --set train.epochs=10 --run-name frozen-10ep
 uv run signs train --seed 1 --run-name mobilenet_frozen-seed1
 ```
 
-The same seed gives the same weights and the same numbers. The validation split has its own `data.split_seed`, so changing the training seed does not change which images are held out. `train` refuses to replace a finished run unless you pass `--overwrite`.
+On a CPU, the same seed gives the same weights and the same numbers. On a GPU, repeats are close but not guaranteed to be exact. The validation split has its own `data.split_seed`, so changing the training seed does not change which images are held out. `train` refuses to replace a finished run unless you pass `--overwrite`.
 
 There is no GPU requirement. Five epochs on a CPU is the intended first run.
 

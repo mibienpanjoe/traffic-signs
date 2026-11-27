@@ -101,20 +101,35 @@ def _build(cls, values: dict, where: str):
     for name, value in values.items():
         if dataclasses.is_dataclass(hints[name]):
             prefix = f"{where}.{name}" if where else name
-            kwargs[name] = _build(hints[name], value or {}, prefix)
+            if value is None:
+                value = {}
+            if not isinstance(value, dict):
+                raise ValueError(f"config key {prefix} expects a mapping, got {value!r}")
+            kwargs[name] = _build(hints[name], value, prefix)
         else:
             kwargs[name] = value
     return cls(**kwargs)
+
+
+def _field_type(keys: list[str]):
+    """The declared type of a dotted config key, or None when there is no such key."""
+    cls = Config
+    for key in keys:
+        if not dataclasses.is_dataclass(cls):
+            return None
+        cls = typing.get_type_hints(cls).get(key)
+    return cls
 
 
 def _parse_override(text: str) -> dict:
     if "=" not in text:
         raise ValueError(f"override {text!r} must look like key.subkey=value")
     dotted, raw_value = text.split("=", 1)
-    value = yaml.safe_load(raw_value)
+    keys = dotted.strip().split(".")
+    # A text field keeps the raw text: `run_name=2024` is a name, not a number.
+    value = raw_value if _field_type(keys) is str else yaml.safe_load(raw_value)
     tree: dict = {}
     node = tree
-    keys = dotted.strip().split(".")
     for key in keys[:-1]:
         node = node.setdefault(key, {})
     node[keys[-1]] = value

@@ -10,8 +10,10 @@ import torch
 def seed_everything(seed: int, deterministic: bool = True) -> None:
     """Seed Python, NumPy and PyTorch, and ask PyTorch for deterministic kernels.
 
-    `warn_only=True` keeps a run going when an operation has no deterministic
-    version on the current device, instead of stopping it.
+    On a CPU this makes a run repeat exactly. On a GPU it is best effort:
+    `warn_only=True` keeps a run going, with a warning, when an operation has
+    no deterministic CUDA version, and the cuBLAS setting only takes effect
+    if CUDA has not been initialized yet.
     """
     random.seed(seed)
     np.random.seed(seed)

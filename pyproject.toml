@@ -1,7 +1,7 @@
 [project]
 name = "signs"
 version = "0.1.0"
-description = "Traffic-sign recognition on GTSRB: image degradations, restoration and robustness."
+description = "Traffic-sign recognition on GTSRB."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
