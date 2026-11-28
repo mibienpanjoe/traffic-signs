@@ -54,10 +54,37 @@ Fine-tuned at 128×128, MobileNetV2 matches the small CNN at 64×64 (95.1%), for
 
 **The hard classes are still the speed limits.** Most of the frequent mistakes are between speed limits (30 ↔ 50 and 80 → 50 for MobileNetV2 and HOG, 20 → 70 for the small CNN), which share a red ring and differ by their digits.
 
+### Under degradation
+
+Each model, unchanged, scored on the test set after eight kinds of damage modelled on image formation, at 5 severities: [`results/figures/degradations.png`](results/figures/degradations.png) shows one sign under all of them. Test accuracy in percent, clean and averaged over severities 1 to 5. The three 64×64 networks are the mean of 3 seeds; MobileNetV2 at 128×128 and HOG + SVM are one run each:
+
+| Model | Clean | Motion blur | Defocus blur | Sensor noise | Low light | Overexposure | Low resolution | JPEG | Dust haze | Mean degraded |
+|---|---|---|---|---|---|---|---|---|---|---|
+| MobileNetV2 frozen | 46.5 | 28.5 | 28.5 | 24.5 | 16.0 | 44.8 | 28.0 | 26.6 | 22.7 | 27.4 |
+| MobileNetV2 fine-tuned | 86.6 | 60.7 | 60.7 | 49.3 | 31.5 | 82.2 | 58.7 | 50.8 | 51.1 | 55.6 |
+| MobileNetV2 fine-tuned, 128×128 | 95.1 | 73.2 | 70.7 | 53.1 | 33.1 | 91.2 | 66.5 | 58.7 | 70.3 | 64.6 |
+| Small CNN | 95.3 | 66.5 | 64.1 | 60.5 | 36.9 | 90.7 | 63.7 | 63.8 | 38.7 | 60.6 |
+| HOG + linear SVM | 91.2 | 64.3 | 67.0 | 56.3 | 37.7 | 87.3 | 63.1 | 68.4 | 80.8 | 65.6 |
+
+Figures: [heatmap](results/phase4/robustness_heatmap.png), [accuracy against severity](results/phase4/robustness_accuracy.png), [calibration error against severity](results/phase4/robustness_ece.png). Every number: [`results/phase4/robustness.csv`](results/phase4/robustness.csv).
+
+**Clean accuracy does not rank robustness.** The small CNN and MobileNetV2 at 128×128 tie on clean images (95%), yet differ by 32 points under dust haze. HOG + SVM, the weakest of the three on clean images, has the best mean under damage (65.6%).
+
+**Dust haze separates the models by design, not by chance.** Haze multiplies the sign's contrast by the transmission t and adds a uniform airlight. HOG normalizes each block of gradient histograms, so a lower contrast and a constant offset change its features very little: it keeps 71% at the strongest haze. The small CNN has no such normalization, and its training only varied contrast by ±30%: it falls to 36% at medium haze and 12% at the strongest.
+
+**Low light is the hardest for every model** (31–38% on average for the trained ones), and **overexposure the easiest** (at most 5 points lost). A likely reason: many GTSRB photos are already dark, so less light leaves few, noisy photons on the sign, while more light first restores contrast before anything clips.
+
+**Mild noise already costs a lot.** At the lightest sensor noise, 400 photons at full white, accuracy drops by 14 to 25 points. The small CNN holds up best (78%).
+
+**More pixels help MobileNetV2 under damage too.** At 128×128 it beats its 64×64 version on every degradation, by 9 points on average and 19 under haze.
+
+**Accuracy falls faster than confidence.** The fine-tuned MobileNetV2 is the most overconfident: at medium low light it is right 30% of the time while its mean confidence is 60% (ECE 0.30). The small CNN stays calibrated under blur, JPEG and moderate noise (ECE ≤ 0.07 up to severity 3), but not under haze, where it is 62% confident and 36% right. The frozen MobileNetV2 keeps a low ECE only because it was never confident.
+
 Reproduce:
 
 ```bash
 bash scripts/phase3.sh   # about 8 hours on a laptop CPU
+bash scripts/phase4.sh   # about 4 hours
 uv run signs tracks --out results/track_structure.json
 uv run signs experiment --config configs/mobilenet_frozen.yaml --seeds 0 1 2
 uv run signs experiment --config configs/mobilenet_frozen_random_split.yaml --seeds 0 1 2
@@ -161,7 +188,8 @@ CI runs the same lint and tests on pushes to `main` and on every pull request, o
 ## Next steps
 
 - Train the small CNN longer at 96×96 and 128×128, to see whether larger images help it once it converges.
-- Measure how each model holds up when the image is blurred, darkened, noisy or compressed.
+- Compare two answers to damage: restore the image first (deblurring, denoising, contrast and dehazing), or train on damaged images.
+- Calibrate the networks' confidence (temperature scaling) and check whether it still holds on damaged images.
 
 ## License
 
