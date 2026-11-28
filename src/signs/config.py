@@ -62,6 +62,17 @@ class HogConfig:
     # best validation accuracy is kept, like a checkpoint.
     svm_c: list = field(default_factory=lambda: [0.01, 0.1, 1.0])
 
+    def __post_init__(self):
+        values = self.svm_c if isinstance(self.svm_c, list) else [self.svm_c]
+        if not values or not all(
+            isinstance(c, (int, float)) and not isinstance(c, bool) and c > 0 for c in values
+        ):
+            raise ValueError(
+                f"config key model.hog.svm_c must be one positive number or a list of them, "
+                f"got {self.svm_c!r}"
+            )
+        self.svm_c = [float(c) for c in values]
+
 
 @dataclass
 class ModelConfig:

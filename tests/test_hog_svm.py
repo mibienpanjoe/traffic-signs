@@ -1,6 +1,7 @@
 import json
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from signs.config import HogConfig, load_config
@@ -70,3 +71,10 @@ def test_hog_figure_is_drawn(fake_track_dir, tmp_path):
     out = tmp_path / "hog.png"
     plot_hog_examples(dataset, HogTransform(32, HogConfig()), [0, 14], out)
     assert out.is_file()
+
+
+def test_svm_c_accepts_one_number_and_rejects_nonsense():
+    assert load_config(None, ["model.hog.svm_c=0.1"]).model.hog.svm_c == [0.1]
+    for bad in ("[]", "[0, 1]", "fast"):
+        with pytest.raises(ValueError, match="svm_c must be one positive number"):
+            load_config(None, [f"model.hog.svm_c={bad}"])
