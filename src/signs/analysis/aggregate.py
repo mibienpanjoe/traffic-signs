@@ -70,3 +70,35 @@ def markdown_table(rows: list[dict]) -> str:
             f"| {cell(row, 'test_macro_f1')} | {cell(row, 'val_minus_test_accuracy')} |"
         )
     return "\n".join(lines) + "\n"
+
+
+def model_table(rows: list[dict]) -> str:
+    """Model comparison: test scores (mean ± std over seeds), size, speed.
+
+    Size and latency come from `signs profile` (profile_* keys), and
+    training time from each run's train_summary.json (train_minutes).
+    Missing values print as a dash.
+    """
+
+    def cell(row, key):
+        return f"{100 * row[key + '_mean']:.1f} ± {100 * row[key + '_std']:.1f}"
+
+    def value(row, key, fmt):
+        return format(row[key], fmt) if row.get(key) is not None else "–"
+
+    lines = [
+        "| Model | Input | Seeds | Test accuracy | Test macro-F1 | Parameters "
+        "| File (MB) | CPU latency (ms/image) | Training (min) |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for row in rows:
+        size = row.get("profile_image_size")
+        lines.append(
+            f"| {row['name']} | {f'{size}×{size}' if size else '–'} | {row['seeds']} "
+            f"| {cell(row, 'test_accuracy')} | {cell(row, 'test_macro_f1')} "
+            f"| {value(row, 'profile_parameters', ',')} "
+            f"| {value(row, 'profile_file_megabytes', '.2f')} "
+            f"| {value(row, 'profile_latency_ms', '.1f')} "
+            f"| {value(row, 'train_minutes', '.0f')} |"
+        )
+    return "\n".join(lines) + "\n"
