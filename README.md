@@ -69,13 +69,14 @@ uv run signs table results/mobilenet_frozen.json results/mobilenet_frozen_random
 
 | Path | Role |
 |---|---|
-| `src/signs/cli.py` | The `signs` command: `download`, `explore`, `tracks`, `train`, `eval`, `predict`, `experiment`, `table`, `hog-figure`, `profile`, `curves`, `degrade` |
+| `src/signs/cli.py` | The `signs` command: `download`, `explore`, `tracks`, `train`, `eval`, `predict`, `experiment`, `table`, `hog-figure`, `profile`, `curves`, `degrade`, `benchmark`, `robustness` |
 | `src/signs/config.py` | One config object, read from YAML, with `--set key=value` overrides |
 | `src/signs/data/` | Download, load, split, augment, degrade, and batch the photos |
 | `src/signs/models/` | MobileNetV2, a small CNN, and HOG features with a linear SVM, built from their config name |
 | `src/signs/training/` | Training loop and seeding |
 | `src/signs/evaluate.py` | Validation and test scores, per-class report, confused pairs, confusion matrix |
-| `src/signs/analysis/metrics.py` | Accuracy, macro-F1, per-class scores, most-confused pairs |
+| `src/signs/analysis/metrics.py` | Accuracy, macro-F1, calibration error, per-class scores, most-confused pairs |
+| `src/signs/analysis/robustness.py` | Scores under every degradation and severity, and their summary across models |
 | `src/signs/predict.py` | Classify one image |
 | `src/signs/runs.py` | Where a run writes its files, and how a trained run is loaded back |
 | `src/signs/class_names.py` | The 43 names, in official id order |
@@ -119,6 +120,8 @@ Each training run gets its own folder, `runs/<run_name>/`:
 | `confused_pairs.csv` | `eval` | The most frequent test mistakes, true class → predicted class, with names |
 | `confusion_matrix.png` | `eval` | Test confusion matrix with class names, each row as shares of the true class |
 | `classification_report.txt` | `eval` | The per-class test scores, for reading |
+| `profile.json` | `profile` | Parameters, file size and CPU latency per image |
+| `robustness.csv` | `benchmark` | Test accuracy, macro-F1 and calibration under each degradation and severity |
 
 The test images are not used to choose the checkpoint. `eval` and `predict` rebuild the model from the run's own `config.yaml`.
 

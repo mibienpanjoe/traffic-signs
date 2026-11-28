@@ -76,3 +76,27 @@ def most_confused_pairs(matrix: np.ndarray, top: int = 10) -> list[dict]:
             }
         )
     return pairs
+
+
+def expected_calibration_error(confidences, correct, bins: int = 15) -> float:
+    """How far the model's confidence is from its accuracy, on average.
+
+    Predictions are grouped by confidence into equal-width bins. In each
+    bin, the gap between mean confidence and accuracy is weighted by the
+    bin's share of predictions. A model that says 90% and is right 90% of
+    the time scores 0. A model that says 90% and is right 50% of the time
+    is overconfident, and its ECE grows.
+    """
+    confidences = np.asarray(confidences, dtype=float)
+    correct = np.asarray(correct, dtype=float)
+    if confidences.shape != correct.shape or confidences.size == 0:
+        raise ValueError("confidences and correct must be non-empty and the same length")
+    # Bin k holds confidences in (k/bins, (k+1)/bins]; a confidence of 0 goes to bin 0.
+    which = np.clip(np.ceil(confidences * bins).astype(int) - 1, 0, bins - 1)
+    ece = 0.0
+    for k in range(bins):
+        members = which == k
+        if members.any():
+            gap = abs(confidences[members].mean() - correct[members].mean())
+            ece += members.mean() * gap
+    return float(ece)
