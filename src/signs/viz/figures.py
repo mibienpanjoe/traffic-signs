@@ -41,3 +41,58 @@ def plot_training_curves(history_csv: Path, path: Path, best_epoch: int | None =
     figure.tight_layout()
     figure.savefig(path, dpi=120)
     plt.close(figure)
+
+
+def plot_hog_examples(dataset, transform, class_ids: list[int], path: Path) -> None:
+    """For a few signs: the photo, the grayscale image HOG reads, and its gradient histograms.
+
+    Each HOG cell is drawn as a star of lines, one per orientation bin, as
+    long as that bin is strong. Edges of the sign's outline and symbol show
+    up as long strokes along the edge.
+    """
+    from skimage import exposure
+
+    from signs.class_names import CLASS_NAMES
+
+    first_index = {}
+    for index, label in enumerate(dataset.labels):
+        if label in class_ids and label not in first_index:
+            first_index[label] = index
+    missing = [class_id for class_id in class_ids if class_id not in first_index]
+    if missing:
+        raise ValueError(f"no training image for class(es) {missing}")
+
+    figure, axes = plt.subplots(3, len(class_ids), figsize=(2.2 * len(class_ids), 6.8))
+    axes = axes.reshape(3, len(class_ids))
+    for column, class_id in enumerate(class_ids):
+        # Take a frame from the middle of the track, where the sign is mid-size.
+        image, _ = dataset[first_index[class_id] + 15]
+        gray = transform.image(image)
+        _, drawing = transform(image, visualize=True)
+        drawing = exposure.rescale_intensity(drawing, in_range=(0, drawing.max() or 1))
+        for row, (picture, cmap) in enumerate(((image, None), (gray, "gray"), (drawing, "gray"))):
+            axes[row, column].imshow(picture, cmap=cmap)
+            axes[row, column].axis("off")
+        axes[0, column].set_title(CLASS_NAMES[class_id], fontsize=8)
+    for row, label in enumerate(("photo", "grayscale input", "HOG cells")):
+        axes[row, 0].text(
+            -0.08,
+            0.5,
+            label,
+            transform=axes[row, 0].transAxes,
+            rotation=90,
+            va="center",
+            ha="right",
+            fontsize=9,
+        )
+    cells = transform.config.pixels_per_cell
+    figure.suptitle(
+        f"HOG at {transform.image_size}×{transform.image_size}: {cells}×{cells}-pixel cells, "
+        f"{transform.config.orientations} orientation bins, "
+        f"{transform.feature_size()} features per sign",
+        fontsize=10,
+    )
+    figure.tight_layout()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(path, dpi=140)
+    plt.close(figure)

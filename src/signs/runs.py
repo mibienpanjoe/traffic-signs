@@ -20,10 +20,13 @@ from signs.config import Config, from_dict, save_config
 
 CONFIG_FILE = "config.yaml"
 CHECKPOINT_FILE = "model.pt"
+# HOG + SVM runs keep their fitted SVM here instead of a network checkpoint.
+SVM_FILE = "model.pkl"
 # Every file train and eval write. --overwrite removes these and nothing else.
 RUN_FILES = (
     CONFIG_FILE,
     CHECKPOINT_FILE,
+    SVM_FILE,
     "history.csv",
     "train_summary.json",
     "training_curves.png",
@@ -37,7 +40,7 @@ RUN_FILES = (
 
 def create_run_dir(config: Config, overwrite: bool = False) -> Path:
     run_dir = config.run_dir
-    if (run_dir / CHECKPOINT_FILE).exists() and not overwrite:
+    if has_model(run_dir) and not overwrite:
         raise FileExistsError(
             f"{run_dir} already holds a trained model. Pick another --run-name or pass --overwrite."
         )
@@ -48,6 +51,12 @@ def create_run_dir(config: Config, overwrite: bool = False) -> Path:
     run_dir.mkdir(parents=True, exist_ok=True)
     save_config(config, run_dir / CONFIG_FILE)
     return run_dir
+
+
+def has_model(run_dir: Path) -> bool:
+    """Whether a run folder holds trained weights of either kind."""
+    run_dir = Path(run_dir)
+    return (run_dir / CHECKPOINT_FILE).is_file() or (run_dir / SVM_FILE).is_file()
 
 
 def load_run_config(run_dir: Path) -> Config:

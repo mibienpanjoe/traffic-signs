@@ -76,6 +76,17 @@ def cmd_tracks(args) -> None:
         print(f"saved {args.out}")
 
 
+def cmd_hog_figure(args) -> None:
+    from signs.data.dataset import preview_dataset
+    from signs.models.hog_svm import HogTransform
+    from signs.viz.figures import plot_hog_examples
+
+    config = _config(args)
+    transform = HogTransform(config.data.image_size, config.model.hog)
+    plot_hog_examples(preview_dataset(config.data), transform, args.classes, args.out)
+    print(f"saved {args.out}")
+
+
 def cmd_train(args) -> None:
     from signs.training.trainer import train
 
@@ -104,11 +115,14 @@ def cmd_eval(args) -> None:
 
 def cmd_predict(args) -> None:
     from signs.predict import predict
+    from signs.runs import load_run_config
 
-    top = predict(_default_run(args), args.image, top_k=args.top_k)
-    print(f"file: {args.image}")
+    run = _default_run(args)
+    top = predict(run, args.image, top_k=args.top_k)
+    svm = load_run_config(run).model.name == "hog_svm"
+    print(f"file: {args.image}" + ("   (SVM scores, not probabilities)" if svm else ""))
     for name, score in top:
-        print(f"  {score:6.1%}  {name}")
+        print(f"  {score:+7.3f}  {name}" if svm else f"  {score:6.1%}  {name}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -128,6 +142,18 @@ def build_parser() -> argparse.ArgumentParser:
     _add_config_args(tracks)
     tracks.add_argument("--out", type=Path, default=None, help="also save the numbers as JSON")
     tracks.set_defaults(func=cmd_tracks)
+
+    hog_figure = commands.add_parser("hog-figure", help="draw what HOG sees on a few signs")
+    _add_config_args(hog_figure)
+    hog_figure.add_argument(
+        "--classes",
+        type=int,
+        nargs="+",
+        default=[1, 14, 13, 17, 25, 38],
+        help="class ids to show (default: 30 km/h, stop, yield, no entry, road work, keep right)",
+    )
+    hog_figure.add_argument("--out", type=Path, default=Path("results/figures/hog_examples.png"))
+    hog_figure.set_defaults(func=cmd_hog_figure)
 
     train = commands.add_parser("train", help="train a run into runs/<run_name>/")
     _add_config_args(train)

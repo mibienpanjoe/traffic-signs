@@ -54,18 +54,21 @@ class SignDataset(Dataset):
         return image, label
 
 
-def load_splits(config: DataConfig):
+def load_splits(config: DataConfig, train_tf=None, eval_tf=None):
     """Return train, validation, and test datasets.
 
     Validation is a share of the training tracks (or images, with
     split: random), held out so we can notice overfitting and pick a
-    checkpoint before we touch the test set.
+    checkpoint before we touch the test set. train_tf and eval_tf replace
+    the network transforms, for models that read the pixels differently.
     """
+    train_tf = train_transform(config) if train_tf is None else train_tf
+    eval_tf = eval_transform(config) if eval_tf is None else eval_tf
     labels = _table(config.data_dir, "train").column("label").to_pylist()
     train_idx, val_idx = split_indices(labels, config.split, config.val_fraction, config.split_seed)
-    train_set = SignDataset(config.data_dir, "train", train_transform(config), train_idx)
-    val_set = SignDataset(config.data_dir, "train", eval_transform(config), val_idx)
-    test_set = SignDataset(config.data_dir, "test", eval_transform(config))
+    train_set = SignDataset(config.data_dir, "train", train_tf, train_idx)
+    val_set = SignDataset(config.data_dir, "train", eval_tf, val_idx)
+    test_set = SignDataset(config.data_dir, "test", eval_tf)
     return train_set, val_set, test_set
 
 
