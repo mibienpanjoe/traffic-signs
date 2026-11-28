@@ -1,0 +1,15 @@
+# A small CNN trained from random weights: no ImageNet, every layer learns.
+# It needs more epochs than the pretrained models, and weight decay to
+# memorize less. Each epoch is cheap on a CPU.
+base: base.yaml
+run_name: cnn_scratch
+model:
+  name: small_cnn
+  pretrained: false
+  freeze_features: false
+train:
+  epochs: 15
+  lr: 0.001
+  weight_decay: 0.0001
+  schedule: cosine
+  early_stopping_patience: 4

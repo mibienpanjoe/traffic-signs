@@ -5,9 +5,11 @@ import torch.nn as nn
 from signs.class_names import CLASS_NAMES
 from signs.config import ModelConfig
 from signs.models.mobilenet import build_mobilenet
+from signs.models.small_cnn import build_small_cnn
 
 MODELS = {
     "mobilenet_v2": build_mobilenet,
+    "small_cnn": build_small_cnn,
 }
 
 
