@@ -22,6 +22,7 @@ Finding the sign inside a full street photo is a different problem (object detec
 | `src/signs/data/transforms.py` | Resize and augment the images |
 | `src/signs/data/dataset.py`, `splits.py` | Read the tables, hold out whole tracks for validation, batch |
 | `src/signs/data/tracks.py` | Check that training rows form 30-frame tracks (`signs tracks`) |
+| `src/signs/data/degradations.py` | Blur, noise, exposure, low resolution, JPEG and haze, each at 5 severities (`signs degrade`) |
 | `src/signs/models/` | The neural network |
 | `src/signs/explore.py` | Look at the data before training |
 | `src/signs/training/trainer.py` | Fit the network and save the best weights |
@@ -186,6 +187,31 @@ The **confusion matrix** is a 43×43 grid. Row is the true class, column is the 
 ## 8. One image
 
 `signs predict` opens a file, applies `eval_transform` (never the random training transform), adds a batch dimension with `unsqueeze(0)`, and runs the network. Softmax turns logits into probabilities. The top three are printed so a near-tie is visible, not only the winner.
+
+## 9. Degraded images
+
+A camera on a robot does not get the clean GTSRB crops. `src/signs/data/degradations.py` builds eight kinds of damage, each from the step of image formation where it happens, at 5 severities:
+
+| Degradation | Model | Parameter, severities 1 to 5 |
+|---|---|---|
+| Motion blur | `I = J ∗ line(length, angle)`, random angle per image | length, 0.05 to 0.25 of the shorter side |
+| Defocus blur | `I = J ∗ disk(radius)` | radius, 0.02 to 0.10 of the shorter side |
+| Sensor noise | `I = Poisson(J·N)/N + 𝒩(0, σ²)` | photons at full white N, 400 down to 10 |
+| Low light | exposure `e`, the same noise with 1000 photons, then gain `e^(-1/2)` | exposure, 0.4 down to 0.025 |
+| Overexposure | `I = min(e·J, 1)` | exposure, 1.5 to 7 |
+| Low resolution | average `f`×`f` blocks, enlarge back bilinearly | shrink factor f, 1.5 to 6 |
+| JPEG | real JPEG encoding | quality, 40 down to 5 |
+| Dust haze | `I = J·t + A·(1 − t)`, A a dusty yellow-brown | transmission t, 0.9 down to 0.3 |
+
+Some details matter:
+
+- **Light is linear, pixels are not.** Pixel values are gamma-encoded: a pixel of 0.5 holds about a fifth of the light of 1.0. Blur, haze and exposure act on light, so the image is turned into light (`x^2.2`), changed, and encoded back.
+- **Shot noise grows with the light.** A pixel that should collect λ photons collects a Poisson count, whose spread is √λ. Relative to the signal, dark pixels are noisier. Read noise, from the electronics, is the same everywhere (σ = 0.01).
+- **Low light is more than a darker image.** The camera raises its gain to make up for part of the missing light, and amplifies the noise with it.
+- **Blur is relative to the crop.** Crops are 26 to 266 pixels across. A fixed 5-pixel blur would wipe out a far sign and barely touch a near one, so blur sizes are a share of the crop's shorter side.
+- **Each image has its own seed**, `(seed, row index)`. The noise and the blur direction of an image do not depend on the batch or the worker that reads it, so a benchmark repeats exactly.
+
+`signs degrade` draws one test sign under every degradation and severity: [`results/figures/degradations.png`](results/figures/degradations.png).
 
 ## Commands
 

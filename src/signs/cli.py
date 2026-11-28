@@ -87,6 +87,33 @@ def cmd_hog_figure(args) -> None:
     print(f"saved {args.out}")
 
 
+def cmd_degrade(args) -> None:
+    from PIL import Image
+
+    from signs.class_names import CLASS_NAMES
+    from signs.data.dataset import SignDataset
+    from signs.viz.figures import plot_degradation_grid
+
+    if args.image is not None:
+        image, title = Image.open(args.image).convert("RGB"), ""
+    else:
+        test = SignDataset(_config(args).data.data_dir, "test", transform=None)
+        for index, label in enumerate(test.labels):
+            image, _ = test[index]
+            if label == args.class_id and min(image.size) >= args.min_size:
+                break
+        else:
+            raise ValueError(
+                f"no test image of class {args.class_id} is at least {args.min_size} pixels across"
+            )
+        title = (
+            f"{CLASS_NAMES[args.class_id]}, test image {index} ({image.size[0]}×{image.size[1]}): "
+            "each degradation at severities 1 to 5"
+        )
+    plot_degradation_grid(image, args.out, seed=args.seed, title=title)
+    print(f"saved {args.out}")
+
+
 def cmd_train(args) -> None:
     from signs.training.trainer import train
 
@@ -178,6 +205,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     hog_figure.add_argument("--out", type=Path, default=Path("results/figures/hog_examples.png"))
     hog_figure.set_defaults(func=cmd_hog_figure)
+
+    degrade = commands.add_parser("degrade", help="draw one sign under every degradation")
+    _add_config_args(degrade)
+    degrade.add_argument("--image", type=Path, default=None, help="a photo (default: a test sign)")
+    degrade.add_argument("--class-id", type=int, default=1, help="class of the test sign")
+    degrade.add_argument(
+        "--min-size", type=int, default=64, help="smallest side of the test sign, in pixels"
+    )
+    degrade.add_argument("--seed", type=int, default=0, help="seed for noise and blur direction")
+    degrade.add_argument("--out", type=Path, default=Path("results/figures/degradations.png"))
+    degrade.set_defaults(func=cmd_degrade)
 
     train = commands.add_parser("train", help="train a run into runs/<run_name>/")
     _add_config_args(train)

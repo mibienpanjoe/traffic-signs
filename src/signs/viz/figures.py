@@ -130,3 +130,36 @@ def plot_validation_curves(runs: dict[str, Path], path: Path) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(path, dpi=130)
     plt.close(figure)
+
+
+def plot_degradation_grid(image, path: Path, seed: int = 0, title: str = "") -> None:
+    """One sign under every degradation (rows) at every severity (columns, 0 = clean)."""
+    from signs.data.degradations import DEGRADATIONS, SEVERITIES, degrade
+
+    rows = len(DEGRADATIONS)
+    figure, axes = plt.subplots(rows, SEVERITIES + 1, figsize=(1.6 * (SEVERITIES + 1), 1.75 * rows))
+    for row, degradation in enumerate(DEGRADATIONS.values()):
+        for severity in range(SEVERITIES + 1):
+            axis = axes[row, severity]
+            axis.imshow(degrade(image, degradation.name, severity, seed))
+            axis.set_xticks([])
+            axis.set_yticks([])
+            if severity:
+                axis.set_title(f"{degradation.levels[severity - 1]:g}", fontsize=7, pad=2)
+        axes[row, 0].set_ylabel(
+            f"{degradation.title}\n({degradation.parameter})",
+            fontsize=7,
+            rotation=0,
+            ha="right",
+            va="center",
+            labelpad=4,
+        )
+    axes[0, 0].set_title("clean", fontsize=7, pad=2)
+    figure.suptitle(
+        title or "Each degradation at severities 1 to 5 (number above: the model's parameter)",
+        fontsize=9,
+    )
+    figure.tight_layout()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(path, dpi=140)
+    plt.close(figure)
