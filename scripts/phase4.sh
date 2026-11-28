@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Phase 4: score the Phase 3 models on the degraded test set.
-# Needs the trained runs of scripts/phase3.sh. About 2 hours on a laptop CPU.
+# Needs the trained runs of scripts/phase3.sh. About 4 hours on a laptop CPU.
 set -euo pipefail
 
 R=results/phase4
