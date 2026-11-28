@@ -157,8 +157,6 @@ CI runs the same lint and tests on pushes to `main` and on every pull request, o
 
 ## Next steps
 
-Natural next steps, without changing the problem:
-
 - Train the small CNN longer at 96×96 and 128×128, to see whether larger images help it once it converges.
 - Measure how each model holds up when the image is blurred, darkened, noisy or compressed.
 
