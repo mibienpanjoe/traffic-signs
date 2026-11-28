@@ -10,7 +10,7 @@ import copy
 import json
 from pathlib import Path
 
-from signs.analysis.aggregate import aggregate_runs, markdown_table
+from signs.analysis.aggregate import aggregate_runs, markdown_table, model_table
 from signs.config import Config
 from signs.runs import has_model, load_run_config, write_csv, write_json
 
@@ -85,14 +85,44 @@ def table_paths(out_stem: Path) -> tuple[Path, Path]:
     )
 
 
-def write_table(summary_paths: list[Path], out_stem: Path) -> str:
-    """Collect experiment summaries into <out_stem>.csv and <out_stem>.md."""
+def _with_run_details(row: dict, runs_dir: Path) -> dict:
+    """Add the first run's profile and the mean training time over the seeds."""
+    names = row.get("runs", "").split()
+    row = dict(row)
+    profile_path = Path(runs_dir) / names[0] / "profile.json" if names else None
+    if profile_path and profile_path.is_file():
+        for key, value in json.loads(profile_path.read_text()).items():
+            if key != "run_name":
+                row[f"profile_{key}"] = value
+    seconds = []
+    for name in names:
+        summary_path = Path(runs_dir) / name / "train_summary.json"
+        if summary_path.is_file():
+            seconds.append(json.loads(summary_path.read_text()).get("train_seconds"))
+    if seconds and None not in seconds:
+        row["train_minutes"] = round(sum(seconds) / len(seconds) / 60, 2)
+    return row
+
+
+def write_table(
+    summary_paths: list[Path], out_stem: Path, kind: str = "split", runs_dir: Path = Path("runs")
+) -> str:
+    """Collect experiment summaries into <out_stem>.csv and <out_stem>.md.
+
+    kind "split" compares validation with test (Phase 2). kind "models"
+    compares test scores with size, latency and training time.
+    """
     rows = [json.loads(Path(path).read_text()) for path in summary_paths]
     if not rows:
         raise ValueError("no experiment summaries given")
+    if kind not in ("split", "models"):
+        raise ValueError(f"unknown table kind {kind!r}; known: split, models")
+    if kind == "models":
+        rows = [_with_run_details(row, runs_dir) for row in rows]
     out_stem = Path(out_stem)
     out_stem.parent.mkdir(parents=True, exist_ok=True)
-    write_csv(table_paths(out_stem)[0], rows)
-    table = markdown_table(rows)
+    fieldnames = list(dict.fromkeys(key for row in rows for key in row))
+    write_csv(table_paths(out_stem)[0], rows, fieldnames=fieldnames)
+    table = markdown_table(rows) if kind == "split" else model_table(rows)
     table_paths(out_stem)[1].write_text(table)
     return table

@@ -102,9 +102,22 @@ def cmd_experiment(args) -> None:
 def cmd_table(args) -> None:
     from signs.experiment import table_paths, write_table
 
-    print(write_table(args.summaries, args.out), end="")
+    print(write_table(args.summaries, args.out, kind=args.kind, runs_dir=args.runs_dir), end="")
     csv_path, md_path = table_paths(args.out)
     print(f"saved {csv_path} and {md_path}")
+
+
+def cmd_profile(args) -> None:
+    from signs.analysis.profile import profile_run
+    from signs.runs import write_json
+
+    for run in args.runs:
+        stats = profile_run(run, images=args.images, threads=args.threads)
+        write_json(Path(run) / "profile.json", stats)
+        print(
+            f"{run}: {stats['parameters']:,} parameters, {stats['file_megabytes']:.2f} MB, "
+            f"{stats['latency_ms']:.1f} ms/image on {stats['latency_threads']} thread(s)"
+        )
 
 
 def cmd_eval(args) -> None:
@@ -174,7 +187,24 @@ def build_parser() -> argparse.ArgumentParser:
     table = commands.add_parser("table", help="collect experiment summaries into one table")
     table.add_argument("summaries", type=Path, nargs="+", help="results/<name>.json files")
     table.add_argument("--out", type=Path, default=Path("results/table"))
+    table.add_argument(
+        "--kind",
+        choices=["split", "models"],
+        default="split",
+        help="split: validation vs test; models: test scores with size, latency, training time",
+    )
+    table.add_argument(
+        "--runs-dir", type=Path, default=Path("runs"), help="where the seed runs are (models)"
+    )
     table.set_defaults(func=cmd_table)
+
+    profile = commands.add_parser(
+        "profile", help="parameters, file size and CPU latency of trained runs"
+    )
+    profile.add_argument("runs", type=Path, nargs="+", help="run folders")
+    profile.add_argument("--images", type=int, default=200, help="test images to time")
+    profile.add_argument("--threads", type=int, default=1, help="CPU threads for PyTorch")
+    profile.set_defaults(func=cmd_profile)
 
     run_help = "run folder (default: the run of the default config)"
     evaluate = commands.add_parser("eval", help="score a run on the official test set")

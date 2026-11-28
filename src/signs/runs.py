@@ -34,6 +34,7 @@ RUN_FILES = (
     "per_class.csv",
     "confused_pairs.csv",
     "classification_report.txt",
+    "profile.json",
     "confusion_matrix.png",
 )
 
