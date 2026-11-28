@@ -11,7 +11,7 @@ The repository root is the project. This file is the study notes. [README.md](RE
 - A test accuracy, a per-class report, and a confusion matrix.
 - A command that classifies one new image.
 
-Finding the sign inside a full street photo is a different problem (object detection). We start from photos where the sign is already the subject, which is the right size for two days.
+Finding the sign inside a full street photo is a different problem (object detection). This project starts from photos where the sign is already cropped.
 
 ## Map of the files
 
@@ -163,9 +163,9 @@ Forward pass, in one sentence: the frozen trunk turns a 64×64 photo into a feat
 
 **Recall** for one class: of the real Stop images, how many we called Stop.
 
-**Macro average** in the report is the unweighted mean across the 43 classes. It drops if rare classes fail, even when overall accuracy stays high. That is the number to mention next to accuracy.
+**Macro average** in the report is the unweighted mean across the 43 classes. It drops if rare classes fail, even when overall accuracy stays high. That is the number to report next to accuracy.
 
-The **confusion matrix** is a 43×43 grid. Row is the true class, column is the predicted class. `confusion_matrix.png` shows each row as shares of that true class, so a rare class is as visible as a common one. A clean model is bright on the diagonal. Off-diagonal spots are the mistakes worth showing in a presentation (speed limits confused with each other is the usual one, because they share a shape and differ by digits).
+The **confusion matrix** is a 43×43 grid. Row is the true class, column is the predicted class. `confusion_matrix.png` shows each row as shares of that true class, so a rare class is as visible as a common one. A clean model is bright on the diagonal. Off-diagonal spots are the mistakes worth looking at first (speed limits confused with each other is the usual one, because they share a shape and differ by digits).
 
 `confused_pairs.csv` lists the largest off-diagonal cells: true class, predicted class, how many images, and what share of the true class that is. `signs eval` prints the five worst pairs and the five classes with the lowest recall.
 
@@ -189,14 +189,6 @@ uv run signs predict path/to/a_sign.jpg --run runs/mobilenet_frozen
 ```
 
 `signs download` writes `data/hf/train.parquet` and `data/hf/test.parquet`. If those files are already present, it leaves them alone.
-
-## How to talk about it
-
-One possible closing sentence for the presentation:
-
-> We trained a MobileNetV2 classifier on GTSRB. The convolutional features come from ImageNet and stay frozen. A new 43-way layer is trained with cross-entropy. On the official test set the accuracy is X, and the main confusions are between similar speed-limit signs.
-
-Fill in X from `metrics.json` after `signs eval`.
 
 ## Glossary
 
