@@ -221,6 +221,8 @@ def plot_robustness_curves(summary: list[dict], path: Path, metric: str = "accur
 
     from signs.data.degradations import DEGRADATIONS
 
+    if not any(row[f"{metric}_mean"] != "" for row in summary):
+        raise ValueError(f"no model has {metric} scores to draw")
     models = list(dict.fromkeys(row["model"] for row in summary))
     names = [n for n in dict.fromkeys(row["degradation"] for row in summary) if n != "clean"]
     columns = 4

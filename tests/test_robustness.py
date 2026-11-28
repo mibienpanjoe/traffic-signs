@@ -104,6 +104,12 @@ def test_benchmark_scores_hog_without_calibration(fake_data_dir, tmp_path):
     assert len(rows) == 2
     assert all(row["ece"] == "" for row in _read(config.run_dir))
 
+    # A summary of HOG alone has accuracy figures but no ECE figure.
+    out = tmp_path / "robustness"
+    main(["robustness", f"hog={config.run_dir}", "--out", str(out)])
+    assert (out / "robustness_accuracy.png").is_file()
+    assert not (out / "robustness_ece.png").exists()
+
 
 def test_summarize_averages_seeds_and_draws(tiny_config, tmp_path):
     tiny_config.train.epochs = 1

@@ -187,9 +187,13 @@ def cmd_robustness(args) -> None:
     (out / "robustness.md").write_text(table)
     plot_robustness_heatmap(summary, out / "robustness_heatmap.png")
     plot_robustness_curves(summary, out / "robustness_accuracy.png", metric="accuracy")
-    plot_robustness_curves(summary, out / "robustness_ece.png", metric="ece")
+    figures = 2
+    # HOG + SVM has no probabilities: without a network there is no ECE to draw.
+    if any(row["ece_mean"] != "" for row in summary):
+        plot_robustness_curves(summary, out / "robustness_ece.png", metric="ece")
+        figures += 1
     print(table, end="")
-    print(f"saved robustness.csv, robustness.md and three figures in {out}")
+    print(f"saved robustness.csv, robustness.md and {figures} figures in {out}")
 
 
 def cmd_eval(args) -> None:
