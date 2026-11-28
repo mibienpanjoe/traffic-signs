@@ -122,13 +122,10 @@ uv run pytest               # runs on a tiny fake dataset, no download
 
 CI runs the same lint and tests on pushes to `main` and on every pull request, on Python 3.10 and 3.12.
 
-## After the presentation
-
-Natural next steps, without changing the problem:
+## Next steps
 
 - Train the convolutional layers as well, with a smaller learning rate.
 - Compare this frozen MobileNetV2 with a small network trained from scratch.
-- Show the per-class errors, especially speed limits, which share a shape and differ by the digits.
 
 ## License
 
