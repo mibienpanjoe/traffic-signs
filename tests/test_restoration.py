@@ -141,6 +141,15 @@ def test_benchmark_with_restoration_writes_its_own_file(tiny_config):
     plain = summarize({"plain": [tiny_config.run_dir]})
     assert plain[0]["accuracy_mean"] == summary[0]["accuracy_mean"]  # same clean images
 
+    # Unlabelled CSVs get the run's name, and repeated labels are refused.
+    out = tiny_config.run_dir.parent / "summary"
+    main(["robustness", str(path), str(tiny_config.run_dir), "--out", str(out)])
+    assert "| tiny restored |" in (out / "robustness.md").read_text()
+    with pytest.raises(SystemExit):
+        main(["robustness", str(path), str(path), "--out", str(out)])
+    with pytest.raises(FileNotFoundError, match="--restore"):
+        summarize({"missing": [tiny_config.run_dir.parent / "none" / RESTORED_FILE]})
+
 
 def test_restoration_quality_measures_both_images(fake_data_dir, tmp_path):
     rows = restoration_quality(fake_data_dir, images=4)

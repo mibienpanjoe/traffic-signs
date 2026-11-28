@@ -145,7 +145,8 @@ def _read(source: Path) -> list[dict]:
     source = Path(source)
     path = source if source.suffix == ".csv" else source / ROBUSTNESS_FILE
     if not path.is_file():
-        raise FileNotFoundError(f"{path} not found. Run: signs benchmark {path.parent}")
+        flag = " --restore" if path.name == RESTORED_FILE else ""
+        raise FileNotFoundError(f"{path} not found. Run: signs benchmark {path.parent}{flag}")
     with path.open() as handle:
         return list(csv.DictReader(handle))
 

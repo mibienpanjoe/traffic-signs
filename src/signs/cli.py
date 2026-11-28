@@ -204,7 +204,17 @@ def cmd_robustness(args) -> None:
     for text in args.models:
         label, _, folders = text.rpartition("=")
         paths = [Path(folder) for folder in folders.split(",") if folder]
-        models[label or paths[0].name] = paths
+        if not label:
+            first = paths[0]
+            restored = first.name == "robustness_restored.csv"
+            label = (
+                (first.parent.name + " restored")
+                if restored
+                else (first.parent.name if first.suffix == ".csv" else first.name)
+            )
+        if label in models:
+            raise ValueError(f"two models are labelled {label!r}; name them with LABEL=")
+        models[label] = paths
     summary = summarize(models)
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
