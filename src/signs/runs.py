@@ -4,6 +4,7 @@ config.yaml          the full resolved config the run used
 history.csv          one row per epoch
 model.pt             weights with the best validation accuracy
 train_summary.json   best epoch and its validation scores
+training_curves.png  loss, accuracy and learning rate per epoch
 metrics.json         validation and test scores, written by `signs eval`
 per_class.csv        test precision, recall and F1 per class
 confused_pairs.csv   the most frequent test mistakes
@@ -25,6 +26,7 @@ RUN_FILES = (
     CHECKPOINT_FILE,
     "history.csv",
     "train_summary.json",
+    "training_curves.png",
     "metrics.json",
     "per_class.csv",
     "confused_pairs.csv",
