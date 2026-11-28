@@ -60,7 +60,7 @@ def predict_val_and_test(run_dir: Path) -> dict:
         )
         outputs = {}
         for name, dataset in (("val", val_set), ("test", test_set)):
-            features, truths = extract_features(dataset)
+            features, truths = extract_features(dataset, config.data)
             outputs[name] = (truths, model.predict(features))
         return outputs
 

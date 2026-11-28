@@ -5,18 +5,21 @@ import time
 import numpy as np
 from torch.utils.data import DataLoader
 
-from signs.config import Config
+from signs.config import Config, DataConfig
 from signs.data.dataset import load_splits
 from signs.models.hog_svm import HogSVM, HogTransform, fit_svm
 from signs.runs import SVM_FILE, create_run_dir, write_csv, write_json
 from signs.training.seed import seed_everything
 
-FEATURE_WORKERS = 4
 
-
-def extract_features(dataset, workers: int = FEATURE_WORKERS):
+def extract_features(dataset, data_config: DataConfig):
     """Run a HOG dataset once and stack (features, labels) as NumPy arrays."""
-    loader = DataLoader(dataset, batch_size=512, shuffle=False, num_workers=workers)
+    loader = DataLoader(
+        dataset,
+        batch_size=data_config.batch_size,
+        shuffle=False,
+        num_workers=data_config.num_workers,
+    )
     features, labels = [], []
     for batch, batch_labels in loader:
         features.append(batch.numpy())
@@ -41,8 +44,8 @@ def train_hog_svm(config: Config, overwrite: bool = False) -> dict:
 
     train_set, val_set, _ = load_splits(config.data, train_tf=transform, eval_tf=transform)
     started = time.perf_counter()
-    train_x, train_y = extract_features(train_set)
-    val_x, val_y = extract_features(val_set)
+    train_x, train_y = extract_features(train_set, config.data)
+    val_x, val_y = extract_features(val_set, config.data)
     feature_seconds = time.perf_counter() - started
     print(f"train images: {len(train_y)}   val images: {len(val_y)}   ({feature_seconds:.0f}s)")
 

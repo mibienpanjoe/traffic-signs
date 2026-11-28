@@ -2,6 +2,9 @@
 # then a linear SVM. C is chosen on the validation tracks.
 base: base.yaml
 run_name: hog_svm
+data:
+  # HOG runs on the CPU in the loader, so worker processes speed it up.
+  num_workers: 4
 model:
   name: hog_svm
   pretrained: false
