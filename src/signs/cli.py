@@ -13,6 +13,7 @@ from pathlib import Path
 from signs.config import load_config
 
 DEFAULT_CONFIG = "configs/mobilenet_frozen.yaml"
+DEGRADE_FIGURE = Path("results/figures/degradations.png")
 
 
 def _add_config_args(parser: argparse.ArgumentParser) -> None:
@@ -110,7 +111,24 @@ def cmd_degrade(args) -> None:
             f"{CLASS_NAMES[args.class_id]}, test image {index} ({image.size[0]}×{image.size[1]}): "
             "each degradation at severities 1 to 5"
         )
-    plot_degradation_grid(image, args.out, seed=args.seed, title=title)
+    if args.restore:
+        from signs.viz.figures import plot_restoration_examples
+
+        out = args.out if args.out != DEGRADE_FIGURE else Path("results/figures/restorations.png")
+        plot_restoration_examples(image, out, seed=args.seed)
+    else:
+        out = args.out
+        plot_degradation_grid(image, out, seed=args.seed, title=title)
+    print(f"saved {out}")
+
+
+def cmd_restoration_quality(args) -> None:
+    from signs.analysis.restoration_quality import restoration_quality
+    from signs.runs import write_csv
+
+    rows = restoration_quality(_config(args).data.data_dir, images=args.images, seed=args.seed)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    write_csv(args.out, rows)
     print(f"saved {args.out}")
 
 
@@ -159,14 +177,22 @@ def cmd_curves(args) -> None:
 
 
 def cmd_benchmark(args) -> None:
-    from signs.analysis.robustness import ROBUSTNESS_FILE, benchmark_run
+    from signs.analysis.robustness import RESTORED_FILE, ROBUSTNESS_FILE, benchmark_run
 
+    name = RESTORED_FILE if args.restore else ROBUSTNESS_FILE
     for run in args.runs:
-        if (Path(run) / ROBUSTNESS_FILE).is_file() and not args.overwrite:
-            print(f"{run}: {ROBUSTNESS_FILE} exists, skipping (--overwrite to score again)")
+        if (Path(run) / name).is_file() and not args.overwrite:
+            print(f"{run}: {name} exists, skipping (--overwrite to score again)")
             continue
-        benchmark_run(run, args.degradations, args.severities, seed=args.seed, workers=args.workers)
-        print(f"saved {Path(run) / ROBUSTNESS_FILE}")
+        benchmark_run(
+            run,
+            args.degradations,
+            args.severities,
+            seed=args.seed,
+            workers=args.workers,
+            restore=args.restore,
+        )
+        print(f"saved {Path(run) / name}")
 
 
 def cmd_robustness(args) -> None:
@@ -252,8 +278,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--min-size", type=int, default=64, help="smallest side of the test sign, in pixels"
     )
     degrade.add_argument("--seed", type=int, default=0, help="seed for noise and blur direction")
-    degrade.add_argument("--out", type=Path, default=Path("results/figures/degradations.png"))
+    degrade.add_argument(
+        "--restore",
+        action="store_true",
+        help="draw each degradation next to its restoration (results/figures/restorations.png)",
+    )
+    degrade.add_argument("--out", type=Path, default=DEGRADE_FIGURE)
     degrade.set_defaults(func=cmd_degrade)
+
+    quality = commands.add_parser(
+        "restoration-quality", help="PSNR and SSIM of degraded and restored test images"
+    )
+    _add_config_args(quality)
+    quality.add_argument("--images", type=int, default=500, help="test images, spread evenly")
+    quality.add_argument("--seed", type=int, default=0, help="seed for noise and blur direction")
+    quality.add_argument("--out", type=Path, default=Path("results/restoration_quality.csv"))
+    quality.set_defaults(func=cmd_restoration_quality)
 
     train = commands.add_parser("train", help="train a run into runs/<run_name>/")
     _add_config_args(train)
@@ -314,6 +354,11 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark.add_argument(
         "--workers", type=int, default=None, help="loader workers (default: the run's config)"
     )
+    benchmark.add_argument(
+        "--restore",
+        action="store_true",
+        help="restore each degraded image first; writes robustness_restored.csv",
+    )
     benchmark.add_argument("--overwrite", action="store_true", help="score runs again")
     benchmark.set_defaults(func=cmd_benchmark)
 
@@ -324,7 +369,10 @@ def build_parser() -> argparse.ArgumentParser:
         "models",
         nargs="+",
         metavar="[LABEL=]RUN[,RUN...]",
-        help="one model per argument; several runs (seeds) separated by commas",
+        help=(
+            "one model per argument; several runs (seeds) separated by commas. "
+            "A run folder means its robustness.csv; a .csv path is read as given"
+        ),
     )
     robustness.add_argument("--out", type=Path, default=Path("results/robustness"))
     robustness.set_defaults(func=cmd_robustness)

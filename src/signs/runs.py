@@ -10,6 +10,7 @@ per_class.csv        test precision, recall and F1 per class
 confused_pairs.csv   the most frequent test mistakes
 profile.json         size and CPU latency, written by `signs profile`
 robustness.csv       scores under each degradation, written by `signs benchmark`
+robustness_restored.csv  the same, with each image restored first (`--restore`)
 """
 
 import csv
@@ -38,6 +39,7 @@ RUN_FILES = (
     "classification_report.txt",
     "profile.json",
     "robustness.csv",
+    "robustness_restored.csv",
     "confusion_matrix.png",
 )
 
