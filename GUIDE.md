@@ -213,6 +213,23 @@ Some details matter:
 
 `signs degrade` draws one test sign under every degradation and severity: [`results/figures/degradations.png`](results/figures/degradations.png).
 
+### Scoring a model on degraded images
+
+`signs benchmark RUN...` reads the test set once clean, then once per degradation × severity (41 passes), and writes `runs/<run>/robustness.csv`. The model is never retrained: it meets the damage for the first time at test time.
+
+Each row has accuracy and macro-F1, and for a network two more numbers:
+
+- **Mean confidence**: the average top softmax probability.
+- **Expected calibration error (ECE)**: predictions are grouped by confidence into 15 bins (0–6.7%, 6.7–13.3%, …). In each bin, the gap between mean confidence and accuracy is weighted by the bin's share of predictions, then summed. A model that says "90%" and is right 90% of the time has ECE 0. On damaged images, a model can lose accuracy while staying just as sure, and that is the failure a robot cannot see.
+
+HOG + SVM gives scores, not probabilities, so it has no ECE here.
+
+`signs robustness "LABEL=RUN1,RUN2,RUN3" ...` puts several models together, each as the mean ± standard deviation over its seeds:
+
+- `robustness.csv` and `robustness.md`, per model × degradation × severity, with a one-line-per-model summary;
+- `robustness_heatmap.png`: clean accuracy and mean degraded accuracy, models × degradations;
+- `robustness_accuracy.png` and `robustness_ece.png`: each metric against severity, one panel per degradation.
+
 ## Commands
 
 From the repository root:

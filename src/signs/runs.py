@@ -8,6 +8,8 @@ training_curves.png  loss, accuracy and learning rate per epoch
 metrics.json         validation and test scores, written by `signs eval`
 per_class.csv        test precision, recall and F1 per class
 confused_pairs.csv   the most frequent test mistakes
+profile.json         size and CPU latency, written by `signs profile`
+robustness.csv       scores under each degradation, written by `signs benchmark`
 """
 
 import csv
@@ -35,6 +37,7 @@ RUN_FILES = (
     "confused_pairs.csv",
     "classification_report.txt",
     "profile.json",
+    "robustness.csv",
     "confusion_matrix.png",
 )
 

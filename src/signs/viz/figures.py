@@ -163,3 +163,102 @@ def plot_degradation_grid(image, path: Path, seed: int = 0, title: str = "") -> 
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(path, dpi=140)
     plt.close(figure)
+
+
+def plot_robustness_heatmap(summary: list[dict], path: Path) -> None:
+    """Models × degradations: clean accuracy, then mean accuracy over severities 1 to 5."""
+    import numpy as np
+
+    from signs.data.degradations import DEGRADATIONS
+
+    models = list(dict.fromkeys(row["model"] for row in summary))
+    names = [n for n in dict.fromkeys(row["degradation"] for row in summary) if n != "clean"]
+    grid = np.zeros((len(models), len(names) + 1))
+    for i, model in enumerate(models):
+        rows = [row for row in summary if row["model"] == model]
+        grid[i, 0] = next(row["accuracy_mean"] for row in rows if row["degradation"] == "clean")
+        for j, name in enumerate(names, start=1):
+            grid[i, j] = np.mean(
+                [row["accuracy_mean"] for row in rows if row["degradation"] == name]
+            )
+    figure, axis = plt.subplots(figsize=(1.15 * (len(names) + 1) + 2.5, 0.6 * len(models) + 1.6))
+    image = axis.imshow(grid, cmap="viridis", vmin=0, vmax=1, aspect="auto")
+    for i in range(grid.shape[0]):
+        for j in range(grid.shape[1]):
+            axis.text(
+                j,
+                i,
+                f"{100 * grid[i, j]:.0f}",
+                ha="center",
+                va="center",
+                fontsize=9,
+                color="black" if grid[i, j] > 0.6 else "white",
+            )
+    axis.set_xticks(
+        range(len(names) + 1),
+        ["Clean"] + [DEGRADATIONS[n].title for n in names],
+        rotation=30,
+        ha="right",
+        fontsize=8,
+    )
+    axis.set_yticks(range(len(models)), models, fontsize=8)
+    axis.axvline(0.5, color="white", linewidth=2)
+    axis.set_title("Test accuracy (%): clean, and mean over the degraded severities", fontsize=10)
+    figure.colorbar(image, ax=axis, fraction=0.03)
+    figure.tight_layout()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(path, dpi=140)
+    plt.close(figure)
+
+
+def plot_robustness_curves(summary: list[dict], path: Path, metric: str = "accuracy") -> None:
+    """One panel per degradation: the metric against severity (0 = clean), one line per model.
+
+    The band is ± one standard deviation over seeds. Models without the
+    metric (HOG + SVM has no ECE) are left out.
+    """
+    import numpy as np
+
+    from signs.data.degradations import DEGRADATIONS
+
+    if not any(row[f"{metric}_mean"] != "" for row in summary):
+        raise ValueError(f"no model has {metric} scores to draw")
+    models = list(dict.fromkeys(row["model"] for row in summary))
+    names = [n for n in dict.fromkeys(row["degradation"] for row in summary) if n != "clean"]
+    columns = 4
+    panel_rows = -(-len(names) // columns)
+    figure, axes = plt.subplots(
+        panel_rows, columns, figsize=(3.2 * columns, 2.7 * panel_rows), sharey=True, squeeze=False
+    )
+    for axis, name in zip(axes.flat, names, strict=False):
+        for model in models:
+            rows = [r for r in summary if r["model"] == model]
+            clean = next(r for r in rows if r["degradation"] == "clean")
+            points = [clean] + sorted(
+                (r for r in rows if r["degradation"] == name), key=lambda r: r["severity"]
+            )
+            if any(p[f"{metric}_mean"] == "" for p in points):
+                continue
+            x = [0] + [p["severity"] for p in points[1:]]
+            mean = np.array([p[f"{metric}_mean"] for p in points], dtype=float)
+            std = np.array([p[f"{metric}_std"] for p in points], dtype=float)
+            axis.plot(x, mean, marker="o", markersize=3, label=model)
+            axis.fill_between(x, mean - std, mean + std, alpha=0.2)
+        axis.set_title(DEGRADATIONS[name].title, fontsize=9)
+        axis.set_xticks(range(0, 6))
+        if metric == "accuracy":
+            axis.set_ylim(0, 1)
+        axis.grid(alpha=0.3)
+    for axis in axes.flat[len(names) :]:
+        axis.axis("off")
+    for axis in axes[-1]:
+        axis.set_xlabel("severity (0 = clean)", fontsize=8)
+    label = {"accuracy": "test accuracy", "ece": "ECE (lower is better)"}.get(metric, metric)
+    for axis in axes[:, 0]:
+        axis.set_ylabel(label, fontsize=8)
+    handles, labels = axes.flat[0].get_legend_handles_labels()
+    figure.legend(handles, labels, loc="lower center", ncol=len(labels), fontsize=8)
+    figure.tight_layout(rect=(0, 0.06, 1, 1))
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(path, dpi=130)
+    plt.close(figure)

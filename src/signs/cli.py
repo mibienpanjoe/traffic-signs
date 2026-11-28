@@ -158,6 +158,44 @@ def cmd_curves(args) -> None:
     print(f"saved {args.out}")
 
 
+def cmd_benchmark(args) -> None:
+    from signs.analysis.robustness import ROBUSTNESS_FILE, benchmark_run
+
+    for run in args.runs:
+        if (Path(run) / ROBUSTNESS_FILE).is_file() and not args.overwrite:
+            print(f"{run}: {ROBUSTNESS_FILE} exists, skipping (--overwrite to score again)")
+            continue
+        benchmark_run(run, args.degradations, args.severities, seed=args.seed, workers=args.workers)
+        print(f"saved {Path(run) / ROBUSTNESS_FILE}")
+
+
+def cmd_robustness(args) -> None:
+    from signs.analysis.robustness import degradation_table, summarize
+    from signs.runs import write_csv
+    from signs.viz.figures import plot_robustness_curves, plot_robustness_heatmap
+
+    models = {}
+    for text in args.models:
+        label, _, folders = text.rpartition("=")
+        paths = [Path(folder) for folder in folders.split(",") if folder]
+        models[label or paths[0].name] = paths
+    summary = summarize(models)
+    out = args.out
+    out.mkdir(parents=True, exist_ok=True)
+    write_csv(out / "robustness.csv", summary)
+    table = degradation_table(summary)
+    (out / "robustness.md").write_text(table)
+    plot_robustness_heatmap(summary, out / "robustness_heatmap.png")
+    plot_robustness_curves(summary, out / "robustness_accuracy.png", metric="accuracy")
+    figures = 2
+    # HOG + SVM has no probabilities: without a network there is no ECE to draw.
+    if any(row["ece_mean"] != "" for row in summary):
+        plot_robustness_curves(summary, out / "robustness_ece.png", metric="ece")
+        figures += 1
+    print(table, end="")
+    print(f"saved robustness.csv, robustness.md and {figures} figures in {out}")
+
+
 def cmd_eval(args) -> None:
     from signs.evaluate import evaluate
 
@@ -261,6 +299,35 @@ def build_parser() -> argparse.ArgumentParser:
     )
     curves.add_argument("--out", type=Path, default=Path("results/curves.png"))
     curves.set_defaults(func=cmd_curves)
+
+    benchmark = commands.add_parser(
+        "benchmark", help="score runs on the test set under every degradation and severity"
+    )
+    benchmark.add_argument("runs", type=Path, nargs="+", help="run folders")
+    benchmark.add_argument(
+        "--degradations", nargs="+", default=None, help="names to score (default: all)"
+    )
+    benchmark.add_argument(
+        "--severities", type=int, nargs="+", default=None, help="severities (default: 1 to 5)"
+    )
+    benchmark.add_argument("--seed", type=int, default=0, help="seed for noise and blur direction")
+    benchmark.add_argument(
+        "--workers", type=int, default=None, help="loader workers (default: the run's config)"
+    )
+    benchmark.add_argument("--overwrite", action="store_true", help="score runs again")
+    benchmark.set_defaults(func=cmd_benchmark)
+
+    robustness = commands.add_parser(
+        "robustness", help="compare benchmarked models: table, heatmap and curves"
+    )
+    robustness.add_argument(
+        "models",
+        nargs="+",
+        metavar="[LABEL=]RUN[,RUN...]",
+        help="one model per argument; several runs (seeds) separated by commas",
+    )
+    robustness.add_argument("--out", type=Path, default=Path("results/robustness"))
+    robustness.set_defaults(func=cmd_robustness)
 
     run_help = "run folder (default: the run of the default config)"
     evaluate = commands.add_parser("eval", help="score a run on the official test set")
