@@ -96,3 +96,37 @@ def plot_hog_examples(dataset, transform, class_ids: list[int], path: Path) -> N
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(path, dpi=140)
     plt.close(figure)
+
+
+def plot_validation_curves(runs: dict[str, Path], path: Path) -> None:
+    """Validation accuracy and loss per epoch for several runs, on shared axes.
+
+    runs maps a legend label to a run folder. A run whose history has no
+    epochs (HOG + SVM) is skipped.
+    """
+    figure, (accuracy_axis, loss_axis) = plt.subplots(1, 2, figsize=(11, 3.8))
+    drawn = 0
+    for label, run_dir in runs.items():
+        with (Path(run_dir) / "history.csv").open() as handle:
+            rows = list(csv.DictReader(handle))
+        if not rows or "epoch" not in rows[0]:
+            continue
+        epochs = [int(row["epoch"]) for row in rows]
+        accuracy_axis.plot(
+            epochs, [float(r["val_accuracy"]) for r in rows], marker="o", label=label
+        )
+        loss_axis.plot(epochs, [float(r["val_loss"]) for r in rows], marker="o", label=label)
+        drawn += 1
+    if not drawn:
+        plt.close(figure)
+        raise ValueError("none of the runs has a per-epoch history")
+    accuracy_axis.set_title("Validation accuracy")
+    loss_axis.set_title("Validation loss")
+    for axis in (accuracy_axis, loss_axis):
+        axis.set_xlabel("epoch")
+        axis.grid(alpha=0.3)
+    accuracy_axis.legend(fontsize=8)
+    figure.tight_layout()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(path, dpi=130)
+    plt.close(figure)

@@ -30,3 +30,17 @@ def test_model_table_joins_scores_profile_and_training_time(tiny_config, tmp_pat
     assert "| tiny | 32×32 | 1 |" in table
     assert "| 1,234 | 0.50 | 3.2 |" in table
     assert "profile_latency_ms" in (results / "models.csv").read_text()
+
+
+def test_profile_caps_the_image_count_at_the_test_set(tiny_config):
+    train(tiny_config)
+    assert profile_run(tiny_config.run_dir, images=500)["latency_images"] == 43
+
+
+def test_validation_curves_overlay_runs(tiny_config, tmp_path):
+    from signs.cli import main
+
+    train(tiny_config)
+    out = tmp_path / "curves.png"
+    main(["curves", f"tiny={tiny_config.run_dir}", "--out", str(out)])
+    assert out.is_file()

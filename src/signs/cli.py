@@ -120,6 +120,17 @@ def cmd_profile(args) -> None:
         )
 
 
+def cmd_curves(args) -> None:
+    from signs.viz.figures import plot_validation_curves
+
+    runs = {}
+    for text in args.runs:
+        label, _, folder = text.rpartition("=")
+        runs[label or Path(folder).name] = Path(folder)
+    plot_validation_curves(runs, args.out)
+    print(f"saved {args.out}")
+
+
 def cmd_eval(args) -> None:
     from signs.evaluate import evaluate
 
@@ -205,6 +216,13 @@ def build_parser() -> argparse.ArgumentParser:
     profile.add_argument("--images", type=int, default=200, help="test images to time")
     profile.add_argument("--threads", type=int, default=1, help="CPU threads for PyTorch")
     profile.set_defaults(func=cmd_profile)
+
+    curves = commands.add_parser("curves", help="validation curves of several runs, together")
+    curves.add_argument(
+        "runs", nargs="+", metavar="[LABEL=]RUN", help="run folders, optionally labelled"
+    )
+    curves.add_argument("--out", type=Path, default=Path("results/curves.png"))
+    curves.set_defaults(func=cmd_curves)
 
     run_help = "run folder (default: the run of the default config)"
     evaluate = commands.add_parser("eval", help="score a run on the official test set")

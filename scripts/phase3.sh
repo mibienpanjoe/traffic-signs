@@ -23,6 +23,10 @@ done
 # Size and latency, measured with nothing else running.
 uv run signs profile runs/*-seed0
 
+uv run signs curves "frozen MobileNetV2=runs/mobilenet_frozen_cosine-seed0" \
+  "fine-tuned MobileNetV2=runs/mobilenet_finetune-seed0" \
+  "small CNN from scratch=runs/cnn_scratch-seed0" --out $R/validation_curves.png
+
 uv run signs table $R/mobilenet_frozen_cosine.json $R/mobilenet_finetune.json \
   $R/cnn_scratch.json $R/hog_svm.json --kind models --out $R/models_64
 uv run signs table \

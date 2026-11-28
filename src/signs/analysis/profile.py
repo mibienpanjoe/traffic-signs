@@ -22,6 +22,7 @@ from signs.runs import CHECKPOINT_FILE, SVM_FILE, load_run_config, load_trained_
 def _test_images(config, count: int) -> list[Image.Image]:
     dataset = load_test_set(config.data)
     dataset.transform = None
+    count = min(count, len(dataset))
     step = max(1, len(dataset) // count)
     return [dataset[i][0] for i in range(0, step * count, step)]
 
