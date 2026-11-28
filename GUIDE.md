@@ -23,6 +23,7 @@ Finding the sign inside a full street photo is a different problem (object detec
 | `src/signs/data/dataset.py`, `splits.py` | Read the tables, hold out whole tracks for validation, batch |
 | `src/signs/data/tracks.py` | Check that training rows form 30-frame tracks (`signs tracks`) |
 | `src/signs/data/degradations.py` | Blur, noise, exposure, low resolution, JPEG and haze, each at 5 severities (`signs degrade`) |
+| `src/signs/data/restoration.py` | The classical restoration for each degradation |
 | `src/signs/models/` | The neural network |
 | `src/signs/explore.py` | Look at the data before training |
 | `src/signs/training/trainer.py` | Fit the network and save the best weights |
@@ -229,6 +230,26 @@ HOG + SVM gives scores, not probabilities, so it has no ECE here.
 - `robustness.csv` and `robustness.md`, per model × degradation × severity, with a one-line-per-model summary;
 - `robustness_heatmap.png`: clean accuracy and mean degraded accuracy, models × degradations;
 - `robustness_accuracy.png` and `robustness_ece.png`: each metric against severity, one panel per degradation.
+
+### Restoring before classifying
+
+`src/signs/data/restoration.py` gives each degradation the classical method made for it:
+
+| Degradation | Restoration | Idea |
+|---|---|---|
+| Motion and defocus blur | Wiener deconvolution | Divide the blur back out in the frequency domain, `Ĵ = H*·I / (|H|² + K)`, except where it erased a frequency |
+| Sensor noise | Non-local means | Average each pixel with pixels whose neighbourhood looks alike |
+| Low light | Non-local means, then CLAHE | Remove the noise, then stretch each tile's brightness histogram |
+| Overexposure | Inverse exposure | Divide the light by the exposure; what clipped to white stays lost |
+| Low resolution | Unsharp mask | Add back the difference with a blurred copy, steepening edges |
+| JPEG | Bilateral filter | Smooth, but not across strong edges, to soften the 8×8 block borders |
+| Dust haze | Dark channel prior | In clear photos most patches have a near-black pixel; haze lifts it, which measures the transmission |
+
+The restoration is told which degradation was applied, how strong it was, and for blur the exact kernel. That is more than a real camera knows, so these are best-case numbers for restoration.
+
+The Wiener balance K was chosen on 150 training images (best mean PSNR), never on test images. The noise level for non-local means is estimated from each image itself (Immerkær's method).
+
+`signs benchmark --restore` scores a model on restored images (`robustness_restored.csv`). `signs restoration-quality` measures, without any model, how close restoration brings an image to the clean one in PSNR and SSIM. `signs degrade --restore` draws each degradation next to its restoration: [`results/figures/restorations.png`](results/figures/restorations.png).
 
 ## Commands
 

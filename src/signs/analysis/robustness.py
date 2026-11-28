@@ -25,6 +25,8 @@ from signs.data.transforms import eval_transform
 from signs.runs import SVM_FILE, load_run_config, load_trained_model, pick_device, write_csv
 
 ROBUSTNESS_FILE = "robustness.csv"
+# The same benchmark with each degraded image restored first.
+RESTORED_FILE = "robustness_restored.csv"
 FIELDS = [
     "run_name",
     "model",
@@ -90,9 +92,18 @@ class _Scorer:
 
 
 def benchmark_run(
-    run_dir: Path, names=None, severities=None, seed: int = 0, workers: int | None = None
+    run_dir: Path,
+    names=None,
+    severities=None,
+    seed: int = 0,
+    workers: int | None = None,
+    restore: bool = False,
 ) -> list[dict]:
-    """Score one trained run on the clean and degraded test set; write robustness.csv."""
+    """Score one trained run on the clean and degraded test set.
+
+    Writes robustness.csv, or with `restore` robustness_restored.csv, where
+    each degraded image goes through its classical restoration first.
+    """
     run_dir = Path(run_dir)
     scorer = _Scorer(run_dir, workers)
     rows = []
@@ -102,7 +113,7 @@ def benchmark_run(
             dataset, level = SignDataset(data_dir, "test", transform=scorer.transform), ""
         else:
             raw = SignDataset(data_dir, "test", transform=None)
-            dataset = DegradedDataset(raw, name, severity, scorer.transform, seed)
+            dataset = DegradedDataset(raw, name, severity, scorer.transform, seed, restore)
             level = DEGRADATIONS[name].levels[severity - 1]
         truths, predictions, confidences = scorer(dataset)
         scores = classification_scores(truths, predictions)
@@ -125,14 +136,17 @@ def benchmark_run(
         rows.append(row)
         ece = f"  ECE {row['ece']:.3f}" if row["ece"] != "" else ""
         print(f"{run_dir.name}  {name:>14} {severity}  accuracy {row['accuracy']:.3f}{ece}")
-    write_csv(run_dir / ROBUSTNESS_FILE, rows, fieldnames=FIELDS)
+    write_csv(run_dir / (RESTORED_FILE if restore else ROBUSTNESS_FILE), rows, fieldnames=FIELDS)
     return rows
 
 
-def _read(run_dir: Path) -> list[dict]:
-    path = Path(run_dir) / ROBUSTNESS_FILE
+def _read(source: Path) -> list[dict]:
+    """A benchmark table: a run folder means its robustness.csv, a file is read as given."""
+    source = Path(source)
+    path = source if source.suffix == ".csv" else source / ROBUSTNESS_FILE
     if not path.is_file():
-        raise FileNotFoundError(f"{path} not found. Run: signs benchmark {run_dir}")
+        flag = " --restore" if path.name == RESTORED_FILE else ""
+        raise FileNotFoundError(f"{path} not found. Run: signs benchmark {path.parent}{flag}")
     with path.open() as handle:
         return list(csv.DictReader(handle))
 
@@ -140,8 +154,10 @@ def _read(run_dir: Path) -> list[dict]:
 def summarize(models: dict[str, list[Path]]) -> list[dict]:
     """Mean ± std over seeds, per model label × degradation × severity.
 
-    models maps a label to the run folders of its seeds. Every run of a
-    label must have scored the same conditions.
+    models maps a label to the run folders of its seeds (their
+    robustness.csv), or to benchmark CSV files such as
+    runs/<run>/robustness_restored.csv. Every run of a label must have
+    scored the same conditions.
     """
     summary = []
     for label, run_dirs in models.items():

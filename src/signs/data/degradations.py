@@ -118,16 +118,29 @@ def poisson_gaussian(
     return counts / photons + rng.normal(0.0, read_noise, size=linear.shape)
 
 
+def blur_kernel(name: str, fraction: float, shape, rng) -> np.ndarray:
+    """The point-spread function a blur uses on an image of this shape.
+
+    Motion blur draws its direction from `rng` first, so a generator in the
+    same state gives the same kernel: `known_blur_kernel` relies on that.
+    """
+    side = min(shape[:2])
+    if name == "motion_blur":
+        return line_kernel(fraction * side, rng.uniform(0, 180))
+    if name == "defocus_blur":
+        return disk_kernel(fraction * side)
+    raise ValueError(f"{name} is not a blur")
+
+
 def motion_blur(image, length_fraction, rng):
     """I = J ∗ line(length, angle), with a random direction per image."""
-    length = length_fraction * min(image.shape[:2])
-    kernel = line_kernel(length, rng.uniform(0, 180))
+    kernel = blur_kernel("motion_blur", length_fraction, image.shape, rng)
     return to_srgb(convolve(to_linear(image), kernel))
 
 
 def defocus_blur(image, radius_fraction, rng):
     """I = J ∗ disk(radius)."""
-    kernel = disk_kernel(radius_fraction * min(image.shape[:2]))
+    kernel = blur_kernel("defocus_blur", radius_fraction, image.shape, rng)
     return to_srgb(convolve(to_linear(image), kernel))
 
 
@@ -258,15 +271,28 @@ def degrade(image: Image.Image, name: str, severity: int, seed=0) -> Image.Image
     return to_image(degradation.apply(to_array(image), level, rng))
 
 
+def known_blur_kernel(name: str, severity: int, shape, seed=0) -> np.ndarray:
+    """The exact kernel `degrade(image, name, severity, seed)` blurred with.
+
+    Restoration that is given this kernel knows more than a real camera
+    would: it is the best case for deblurring.
+    """
+    degradation = check(name, severity)
+    return blur_kernel(name, degradation.levels[severity - 1], shape, np.random.default_rng(seed))
+
+
 class DegradedDataset:
     """A dataset of PIL images, degraded, then passed to the model's transform.
 
     `base` must return untransformed PIL images. Each image is degraded
     with its own seed, (seed, row index), so its noise and blur direction
-    do not depend on batching or worker count.
+    do not depend on batching or worker count. With `restore`, the
+    matching classical restoration is applied after the degradation.
     """
 
-    def __init__(self, base, name: str, severity: int, transform, seed: int = 0):
+    def __init__(
+        self, base, name: str, severity: int, transform, seed: int = 0, restore: bool = False
+    ):
         check(name, severity)
         if base.transform is not None:
             raise ValueError("the base dataset must return untransformed images")
@@ -276,11 +302,17 @@ class DegradedDataset:
         self.severity = severity
         self.transform = transform
         self.seed = seed
+        self.restore = restore
 
     def __len__(self):
         return len(self.base)
 
     def __getitem__(self, position):
         image, label = self.base[position]
-        image = degrade(image, self.name, self.severity, (self.seed, self.base.indices[position]))
+        seed = (self.seed, self.base.indices[position])
+        image = degrade(image, self.name, self.severity, seed)
+        if self.restore:
+            from signs.data.restoration import restore
+
+            image = restore(image, self.name, self.severity, seed)
         return self.transform(image), label

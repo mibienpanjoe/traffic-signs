@@ -262,3 +262,39 @@ def plot_robustness_curves(summary: list[dict], path: Path, metric: str = "accur
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(path, dpi=130)
     plt.close(figure)
+
+
+def plot_restoration_examples(image, path: Path, severities=(2, 4), seed: int = 0) -> None:
+    """For each degradation: the degraded sign and its restoration, at two severities."""
+    from signs.data.degradations import DEGRADATIONS, degrade
+    from signs.data.restoration import RESTORATIONS, restore
+
+    rows = len(DEGRADATIONS)
+    columns = 1 + 2 * len(severities)
+    figure, axes = plt.subplots(rows, columns, figsize=(1.6 * columns + 1.4, 1.75 * rows))
+    for row, (name, degradation) in enumerate(DEGRADATIONS.items()):
+        pictures = [("clean", image)]
+        for severity in severities:
+            damaged = degrade(image, name, severity, seed)
+            pictures.append((f"severity {severity}", damaged))
+            pictures.append(("restored", restore(damaged, name, severity, seed)))
+        for column, (title, picture) in enumerate(pictures):
+            axis = axes[row, column]
+            axis.imshow(picture)
+            axis.set_xticks([])
+            axis.set_yticks([])
+            if row == 0:
+                axis.set_title(title, fontsize=8)
+        axes[row, 0].set_ylabel(
+            f"{degradation.title}\n→ {RESTORATIONS[name].title}",
+            fontsize=7,
+            rotation=0,
+            ha="right",
+            va="center",
+            labelpad=4,
+        )
+    figure.suptitle("Classical restoration of each degradation", fontsize=9)
+    figure.tight_layout()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(path, dpi=140)
+    plt.close(figure)
