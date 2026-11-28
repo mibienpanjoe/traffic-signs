@@ -1,0 +1,13 @@
+# Classical computer vision: HOG features on the 64x64 grayscale sign,
+# then a linear SVM. C is chosen on the validation tracks.
+base: base.yaml
+run_name: hog_svm
+model:
+  name: hog_svm
+  pretrained: false
+  freeze_features: false
+  hog:
+    orientations: 9
+    pixels_per_cell: 8
+    cells_per_block: 2
+    svm_c: [0.001, 0.003, 0.01, 0.03, 0.1]

@@ -52,10 +52,24 @@ class DataConfig:
 
 
 @dataclass
+class HogConfig:
+    """Histogram of oriented gradients, as in Dalal and Triggs (2005)."""
+
+    orientations: int = 9
+    pixels_per_cell: int = 8
+    cells_per_block: int = 2
+    # Regularization strengths tried for the linear SVM. The one with the
+    # best validation accuracy is kept, like a checkpoint.
+    svm_c: list = field(default_factory=lambda: [0.01, 0.1, 1.0])
+
+
+@dataclass
 class ModelConfig:
     name: str = "mobilenet_v2"
     pretrained: bool = True
     freeze_features: bool = True
+    # Used only by model.name: hog_svm.
+    hog: HogConfig = field(default_factory=HogConfig)
 
 
 @dataclass

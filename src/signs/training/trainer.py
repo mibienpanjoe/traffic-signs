@@ -61,6 +61,10 @@ def parameter_groups(network: nn.Module, train_config: TrainConfig) -> list[dict
 
 def train(config: Config, overwrite: bool = False) -> dict:
     """Train one run and write its folder. Returns the training summary."""
+    if config.model.name == "hog_svm":
+        from signs.training.hog_trainer import train_hog_svm
+
+        return train_hog_svm(config, overwrite=overwrite)
     run_dir = create_run_dir(config, overwrite=overwrite)
     seed_everything(config.seed)
     device = pick_device()
