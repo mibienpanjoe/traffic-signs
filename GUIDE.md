@@ -251,6 +251,18 @@ The Wiener balance K was chosen on 150 training images (best mean PSNR), never o
 
 `signs benchmark --restore` scores a model on restored images (`robustness_restored.csv`). `signs restoration-quality` measures, without any model, how close restoration brings an image to the clean one in PSNR and SSIM. `signs degrade --restore` draws each degradation next to its restoration: [`results/figures/restorations.png`](results/figures/restorations.png).
 
+### Training on damaged images
+
+The other answer to damage is to show it during training. With `data.augment.degrade_probability: 0.5`, each training photo has an even chance of getting one of the degradations, picked at random, at a random severity from 1 to `degrade_max_severity`. The degradation is applied to the photo at its own size, before resizing and the usual rotation and colour jitter, exactly as in the benchmark. The checkpoint is still chosen on clean validation images.
+
+`configs/cnn_degrade.yaml` trains the small CNN this way. Three more configs each leave one family out of `degrade_names`, to see whether what the network learns carries over to damage it never saw:
+
+- `cnn_degrade_no_blur.yaml`: no motion or defocus blur
+- `cnn_degrade_no_noise.yaml`: no sensor noise or low light
+- `cnn_degrade_no_haze.yaml`: no haze
+
+The random choices come from NumPy's generator. `seed_everything` seeds it in the main process and `worker_init_fn` in each loader worker, so a run repeats.
+
 ## Commands
 
 From the repository root:

@@ -24,6 +24,34 @@ class AugmentConfig:
     brightness: float = 0.3
     contrast: float = 0.3
     saturation: float = 0.2
+    # Degradation-aware training: with this probability, a training image
+    # gets one degradation from degrade_names (empty = all of them) at a
+    # random severity from 1 to degrade_max_severity, before the rest.
+    degrade_probability: float = 0.0
+    degrade_names: list = field(default_factory=list)
+    degrade_max_severity: int = 5
+
+    def __post_init__(self):
+        from signs.data.degradations import DEGRADATIONS, SEVERITIES
+
+        if isinstance(self.degrade_names, str):
+            self.degrade_names = [self.degrade_names]
+        if not 0 <= self.degrade_probability <= 1:
+            raise ValueError(
+                "config key data.augment.degrade_probability must be between 0 and 1, "
+                f"got {self.degrade_probability}"
+            )
+        unknown = [name for name in self.degrade_names if name not in DEGRADATIONS]
+        if unknown:
+            raise ValueError(
+                f"unknown degradation(s) in data.augment.degrade_names: {unknown}; "
+                f"known: {', '.join(DEGRADATIONS)}"
+            )
+        if not 1 <= self.degrade_max_severity <= SEVERITIES:
+            raise ValueError(
+                f"config key data.augment.degrade_max_severity must be 1 to {SEVERITIES}, "
+                f"got {self.degrade_max_severity}"
+            )
 
 
 @dataclass

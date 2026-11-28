@@ -1,0 +1,11 @@
+# The small CNN trained on damaged images: half of the training photos get
+# one of the eight degradations at a random severity, before the usual
+# augmentation. Everything else is the same as cnn_scratch.yaml.
+# The checkpoint is still chosen on clean validation images.
+base: cnn_scratch.yaml
+run_name: cnn_degrade
+data:
+  # Degrading on the fly costs a few milliseconds per photo; workers share it.
+  num_workers: 4
+  augment:
+    degrade_probability: 0.5
