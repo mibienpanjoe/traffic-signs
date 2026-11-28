@@ -4,11 +4,13 @@
 
 A camera sees one cropped traffic sign. This project names it, and reports how sure the model is. That label is what a small robot or a driver-assist demo can turn into an action: stop, yield, or a speed limit.
 
-The model is a MobileNetV2 network. Its convolutional layers stay as they were trained on ImageNet. A new final layer learns the 43 sign classes of the German Traffic Sign Recognition Benchmark (GTSRB).
+It compares four models on the 43 sign classes of the German Traffic Sign Recognition Benchmark (GTSRB): MobileNetV2 pretrained on ImageNet, frozen or fine-tuned; a small network trained from scratch; and hand-made HOG features with a linear SVM.
 
 The study notes, with the libraries and the training concepts, are in [GUIDE.md](GUIDE.md).
 
 ## Results so far
+
+### Validation split
 
 Frozen MobileNetV2 (only the last layer trained), 64×64 input, 5 epochs on CPU, 3 seeds. Mean ± standard deviation over seeds, in percent:
 
@@ -23,9 +25,39 @@ Frozen MobileNetV2 (only the last layer trained), 64×64 input, 5 epochs on CPU,
 
 **The mistakes are the expected ones.** The most frequent confusions, averaged over seeds, are Speed limit 120 → 80 (30% of 120 signs), 30 → 50 (29%), Ahead only → Keep right (24%) and 50 → 70 (18%). Speed limits share a red ring and differ only in their digits, which at 64×64 through a frozen ImageNet trunk is little detail.
 
+### Comparing models
+
+Four models at 64×64, all on the track split, scored on the official test set. Latency is the median time to classify one image, end to end, on one CPU thread.
+
+| Model | Seeds | Test accuracy | Test macro-F1 | Parameters | File (MB) | CPU latency (ms/image) | Training (min) |
+|---|---|---|---|---|---|---|---|
+| MobileNetV2, frozen (cosine schedule) | 3 | 46.5 ± 0.3 | 36.6 ± 0.1 | 2,278,955 | 9.34 | 5.1 | 8 |
+| MobileNetV2, fine-tuned | 3 | 86.6 ± 0.3 | 81.1 ± 0.9 | 2,278,955 | 9.34 | 4.8 | 23 |
+| Small CNN from scratch | 3 | 95.3 ± 0.4 | 92.1 ± 1.1 | 75,099 | 0.31 | 2.0 | 20 |
+| HOG + linear SVM | 1 | 91.2 | 90.1 | 75,895 | 0.61 | 1.0 | 5 |
+
+**At 64×64, a small network trained from scratch wins.** It is 30 times smaller than MobileNetV2, more than twice as fast on a CPU, and 9 points more accurate than the fine-tuned MobileNetV2. Pedestrians, never recognized by the frozen model, is still the weakest class of the fine-tuned one (recall 15% on seed 0).
+
+**Hand-made features are a strong baseline.** HOG, the histogram of edge directions in 8×8 cells, with a linear SVM reaches 91.2% in 5 minutes of CPU, with no network at all. What HOG sees: [`results/figures/hog_examples.png`](results/figures/hog_examples.png).
+
+**Training the pretrained layers is what matters, not the schedule.** A cosine learning-rate schedule moves the frozen model from 45.5% to 46.5%. Training the convolutional layers as well, at a tenth of the learning rate, takes it to 86.6%. The validation curves: [`results/phase3/validation_curves.png`](results/phase3/validation_curves.png).
+
+**MobileNetV2 wants larger images; the small CNN, with the same 15 epochs, does not get there.** Test accuracy in percent; 64×64 is the mean of 3 seeds, 96×96 and 128×128 are one seed each:
+
+| Model | 64×64 | 96×96 | 128×128 |
+|---|---|---|---|
+| MobileNetV2, frozen | 46.5 | 58.7 | 64.7 |
+| MobileNetV2, fine-tuned | 86.6 | 94.2 | 95.1 |
+| Small CNN from scratch | 95.3 | 86.9 | 69.3 |
+
+Fine-tuned at 128×128, MobileNetV2 matches the small CNN at 64×64 (95.1%), for four times the pixels, 30 times the parameters and four times the training time. The small CNN's drop at larger sizes is undertraining, not a limit of the size: at 96×96 it was still improving at epoch 15, with training accuracy at 87% against 96% at 64×64. Full table: [`results/phase3/input_size.md`](results/phase3/input_size.md).
+
+**The hard classes are still the speed limits.** Most of the frequent mistakes are between speed limits (30 ↔ 50 and 80 → 50 for MobileNetV2 and HOG, 20 → 70 for the small CNN), which share a red ring and differ by their digits.
+
 Reproduce:
 
 ```bash
+bash scripts/phase3.sh   # about 8 hours on a laptop CPU
 uv run signs tracks --out results/track_structure.json
 uv run signs experiment --config configs/mobilenet_frozen.yaml --seeds 0 1 2
 uv run signs experiment --config configs/mobilenet_frozen_random_split.yaml --seeds 0 1 2
@@ -37,7 +69,7 @@ uv run signs table results/mobilenet_frozen.json results/mobilenet_frozen_random
 
 | Path | Role |
 |---|---|
-| `src/signs/cli.py` | The `signs` command: `download`, `explore`, `tracks`, `train`, `eval`, `predict`, `experiment`, `table`, `hog-figure` |
+| `src/signs/cli.py` | The `signs` command: `download`, `explore`, `tracks`, `train`, `eval`, `predict`, `experiment`, `table`, `hog-figure`, `profile`, `curves` |
 | `src/signs/config.py` | One config object, read from YAML, with `--set key=value` overrides |
 | `src/signs/data/` | Download, load, split, augment, and batch the photos |
 | `src/signs/models/` | MobileNetV2, a small CNN, and HOG features with a linear SVM, built from their config name |
@@ -123,13 +155,12 @@ uv run pytest               # runs on a tiny fake dataset, no download
 
 CI runs the same lint and tests on pushes to `main` and on every pull request, on Python 3.10 and 3.12.
 
-## After the presentation
+## Next steps
 
 Natural next steps, without changing the problem:
 
-- Train the convolutional layers as well, with a smaller learning rate.
-- Compare this frozen MobileNetV2 with a small network trained from scratch.
-- Show the per-class errors, especially speed limits, which share a shape and differ by the digits.
+- Train the small CNN longer at 96×96 and 128×128, to see whether larger images help it once it converges.
+- Measure how each model holds up when the image is blurred, darkened, noisy or compressed.
 
 ## License
 
