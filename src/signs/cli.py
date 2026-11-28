@@ -13,7 +13,6 @@ from pathlib import Path
 from signs.config import load_config
 
 DEFAULT_CONFIG = "configs/mobilenet_frozen.yaml"
-DEGRADE_FIGURE = Path("results/figures/degradations.png")
 
 
 def _add_config_args(parser: argparse.ArgumentParser) -> None:
@@ -114,10 +113,10 @@ def cmd_degrade(args) -> None:
     if args.restore:
         from signs.viz.figures import plot_restoration_examples
 
-        out = args.out if args.out != DEGRADE_FIGURE else Path("results/figures/restorations.png")
+        out = args.out or Path("results/figures/restorations.png")
         plot_restoration_examples(image, out, seed=args.seed)
     else:
-        out = args.out
+        out = args.out or Path("results/figures/degradations.png")
         plot_degradation_grid(image, out, seed=args.seed, title=title)
     print(f"saved {out}")
 
@@ -293,7 +292,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="draw each degradation next to its restoration (results/figures/restorations.png)",
     )
-    degrade.add_argument("--out", type=Path, default=DEGRADE_FIGURE)
+    degrade.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="default: results/figures/degradations.png, or restorations.png with --restore",
+    )
     degrade.set_defaults(func=cmd_degrade)
 
     quality = commands.add_parser(
