@@ -1,0 +1,7 @@
+# Generalization test: trained on every degradation except blur, then
+# tested on blur it never saw.
+base: cnn_degrade.yaml
+run_name: cnn_degrade_no_blur
+data:
+  augment:
+    degrade_names: [sensor_noise, low_light, overexposure, low_resolution, jpeg, haze]

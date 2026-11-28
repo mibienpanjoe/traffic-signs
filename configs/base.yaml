@@ -17,6 +17,9 @@ data:
     brightness: 0.3
     contrast: 0.3
     saturation: 0.2
+    degrade_probability: 0.0
+    degrade_names: []
+    degrade_max_severity: 5
 
 model:
   name: mobilenet_v2

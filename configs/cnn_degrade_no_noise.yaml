@@ -1,0 +1,7 @@
+# Generalization test: trained without sensor noise and low light (the two
+# noisy degradations), then tested on them.
+base: cnn_degrade.yaml
+run_name: cnn_degrade_no_noise
+data:
+  augment:
+    degrade_names: [motion_blur, defocus_blur, overexposure, low_resolution, jpeg, haze]

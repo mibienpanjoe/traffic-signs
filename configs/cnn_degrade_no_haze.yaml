@@ -1,0 +1,6 @@
+# Generalization test: trained on every degradation except dust haze.
+base: cnn_degrade.yaml
+run_name: cnn_degrade_no_haze
+data:
+  augment:
+    degrade_names: [motion_blur, defocus_blur, sensor_noise, low_light, overexposure, low_resolution, jpeg]
