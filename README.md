@@ -37,10 +37,10 @@ uv run signs table results/mobilenet_frozen.json results/mobilenet_frozen_random
 
 | Path | Role |
 |---|---|
-| `src/signs/cli.py` | The `signs` command: `download`, `explore`, `train`, `eval`, `predict` |
+| `src/signs/cli.py` | The `signs` command: `download`, `explore`, `tracks`, `train`, `eval`, `predict`, `experiment`, `table`, `hog-figure` |
 | `src/signs/config.py` | One config object, read from YAML, with `--set key=value` overrides |
 | `src/signs/data/` | Download, load, split, augment, and batch the photos |
-| `src/signs/models/` | The networks (MobileNetV2, a small CNN), built from their config name |
+| `src/signs/models/` | MobileNetV2, a small CNN, and HOG features with a linear SVM, built from their config name |
 | `src/signs/training/` | Training loop and seeding |
 | `src/signs/evaluate.py` | Validation and test scores, per-class report, confused pairs, confusion matrix |
 | `src/signs/analysis/metrics.py` | Accuracy, macro-F1, per-class scores, most-confused pairs |
